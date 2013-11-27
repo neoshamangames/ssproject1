@@ -1,0 +1,16 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\VectrosityDemos\Scripts\_Simple2DLine\Line.js">
+    <Files>
+      <File FileName="Assets\Scripts\Plant.cs" Line="42" Column="49" />
+      <File FileName="Assets\VectrosityDemos\Scripts\Curve\DrawCurve.js" Line="205" Column="25" />
+      <File FileName="Assets\VectrosityDemos\Scripts\EndCap\EndCapDemo.js" Line="26" Column="17" />
+      <File FileName="Assets\VectrosityDemos\Shaders\UnlitAlpha.shader" Line="18" Column="2" />
+      <File FileName="Assets\VectrosityDemos\Scripts\_Simple2DLine\Line.js" Line="13" Column="6" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>
