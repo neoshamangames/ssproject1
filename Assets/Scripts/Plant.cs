@@ -7,7 +7,6 @@ public class Plant : MonoBehaviour {
 	#region Attributes
 	public bool drawDebugMarks;
 	public bool bezierCurves;
-	[Range(.1f, 100)] public float lineWidth = 1f;
 	public Material normalMaterial;
 	public Material glowMaterial;
 	public Material dotMaterial;
@@ -22,6 +21,10 @@ public class Plant : MonoBehaviour {
 	[Range(0, 50)] public float growSegmentsPerSecond = .1f;
 	[Range(0, 5)]public float stateTransitionSeconds = 1f;
 	[Range(5, 1000)]public int segmentsPerScreen = 50;
+	[Range(.1f, 20)]public float lineWidth = 1f;
+	[Range(.1f, 3f)]public float glowLineWidthScaler = 1.5f;
+	[Range(0f, 1f)]public float widthGrowFactor = 0f;
+	[Range(.1f, 20)]public float maxWidth = 3f;
 	[Range(0, 45)] public float minBezierAngle = 5f;
 	[Range(0, 45)] public float maxBezierAngle = 30f;
 	[Range(0, 1)] public float minBezierControlLength = .05f;
@@ -35,23 +38,23 @@ public class Plant : MonoBehaviour {
 	[Range(0, 1)]public float maxSplineOffset = .25f;
 	[Range(0, 1)]public float minSplineYSeperation = .25f;
 	#endregion
+	
+	#region Properties
+	public float Height
+	{
+		get { return line.points2[line.drawEnd].y; }
+	}
+	#endregion
 
 	#region Unity
 	void Awake()
 	{
 		//setup camera
-		Camera vectorCam = VectorLine.SetCamera ();
-		Camera mainCam = Camera.main;
-		vectorCam.orthographic = mainCam.orthographic;
-		vectorCam.transform.position = mainCam.transform.position;
-		vectorCam.transform.localScale = mainCam.transform.localScale;
-		vectorCam.orthographicSize = mainCam.orthographicSize;
-		vectorCam.nearClipPlane = 0;
-		vectorCam.farClipPlane = 5000;
-		height = vectorCam.orthographicSize * 2;
-		width = height * Screen.width / Screen.height;
-		Debug.Log ("width: " + width);
+		screenHeight = CameraManager.Instance.Height;
 		line = new VectorLine ("Plant", new Vector2[MAX_POINTS - 2], healthyColor, normalMaterial, lineWidth, LineType.Continuous, Joins.Weld);
+		glowAlphaColor = new Color(veryHealthyColor.r, veryHealthyColor.g, veryHealthyColor.b, 0);
+		glowLine = new VectorLine ("PlantGlow", new Vector2[MAX_POINTS - 2], glowAlphaColor, glowMaterial, lineWidth * glowLineWidthScaler, LineType.Continuous, Joins.Weld);
+		glowLine.active = false;
 		controlLine1 = new VectorLine ("Control Line 1", new Vector2[2], Color.red, null, .02f);
 		controlLine2 = new VectorLine ("Control Line 2", new Vector2[2], Color.red, null, .02f);
 		curvePoints = new Vector2[4];
@@ -65,30 +68,54 @@ public class Plant : MonoBehaviour {
 		line.endCap = "Point";
 		line.drawStart = 0;
 		line.drawEnd = endSegment;
+		UpdateWidth();
+		line.smoothWidth = true;
 		
 		splineSide = (Random.Range(0, 2) == 0);
 
 		//DrawPlant ();
-		AddCurve ();
+		AddCurve();
+		lowPoint = line.points2[0];
+		highPoint = line.points2[1];
+		glowLine.Draw();
 		line.Draw();
+		points = new VectorPoints("Points", new Vector2[]{lowPoint, highPoint}, dotMaterial, 2.0f);
+		//points.Draw();
 	}
 
 	void Update()
 	{
-		bool redraw = false;
 		growth += Time.deltaTime * growSegmentsPerSecond;
-		int newSegment = Mathf.FloorToInt (growth);
+		int intPart = Mathf.FloorToInt(growth);
+		float decPart = growth % 1;
 
-		if (newSegment > endSegment) {
-			if (newSegment > lastSegment)
+		if (intPart >= endSegment) {
+			//Debug.Log("growth: " + growth + ". intPart: " + intPart + ". decPart: " + decPart);
+//			if (decPart < SKIP_TO_DEC)
+//			{
+//				decPart = SKIP_TO_DEC;
+//				growth = intPart + decPart;
+//			}
+			if (intPart == lastSegment)
 			{
 				AddCurve();
 			}
-			endSegment = newSegment;
+			line.points2[intPart] = Vector2.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);;
+			lowPoint = highPoint;
+			highPoint = line.points2[intPart + 1];
+			endSegment = intPart + 1;
 			line.drawEnd = endSegment;
-			redraw = true;
-			//Debug.Log ("endSegment: " + endSegment);
+			glowLine.drawEnd = endSegment;
+			//VectorLine.Destroy(ref points);
+			//points = new VectorPoints("Points", new Vector2[]{lowPoint, highPoint}, dotMaterial, 2.0f);
+			//points.Draw();
+			
+			//Debug.Log ("lowPoint: " + lowPoint);
+			//Debug.Log ("highPoint: " + highPoint);
 		}
+		UpdateWidth();
+		line.points2[intPart + 1] = Vector2.Lerp(lowPoint, highPoint, decPart);
+
 		if (transitioning)
 		{
 			transitionTimer += Time.deltaTime;
@@ -104,8 +131,25 @@ public class Plant : MonoBehaviour {
 				transitioning = false;
 			}
 		}
-		if (redraw)
-			line.Draw();
+		if (glowTransitioning)
+		{
+			glowTransitionTimer += Time.deltaTime;
+			float t;
+			if (glowTransitionTimer < stateTransitionSeconds)
+			{
+				t = glowTransitionTimer/stateTransitionSeconds;
+				glowLine.SetColor(Color.Lerp(previousGlowColor, targetGlowColor, t));
+			}
+			else
+			{
+				glowLine.SetColor(targetGlowColor);
+				glowTransitioning = false;
+				if (glowLine.color != veryHealthyColor)
+					glowLine.active = false;
+			}
+		}
+		glowLine.Draw();
+		line.Draw();
 	}
 
 	void OnGUI()
@@ -138,39 +182,64 @@ public class Plant : MonoBehaviour {
 		if (GUI.Button (new Rect (10, 230, 90, 30), "Reset Plant"))
 			Restart();
 			
+		if (GUI.Button (new Rect (10, 270, 90, 30), "Print Points"))
+		{
+			for(int i=0; i < line.points2.Length; i++)
+				Debug.Log("points[" + i + "]: " + line.points2[i]);
+		}
+			
 	}
 	#endregion
 
 	#region Private
 	private const int MAX_POINTS = 16384;
+	private const float DROP_BACK_PERCENT = .95f;
 	private Vector2[] curvePoints;
 	private VectorLine line;
+	private VectorLine glowLine;
 	private VectorLine controlLine1;
 	private VectorLine controlLine2;
 	private Vector2 startPoint;
-	private float width;
-	private float height;
+	private float screenHeight;
 	private float growth = 0;
 	private int endSegment = 1;
 	private int lastSegment = 0;
 	private Vector2 finishPoint;
 	private float lastAngle;
 	private bool lastControlPointFlipped;
+	private bool splineSide;
+	private bool glow;
+	
+	private Vector2 lowPoint;
+	private Vector2 highPoint;
+	
+	VectorPoints points;
+	
+	//color transition
+	private bool transitioning;
 	private Color targetColor;
 	private Color previousColor;
-	private bool glow;
-	private bool transitioning;
 	private float transitionTimer;
-	private bool splineSide;
-
+	
+	
+	//glow transition
+	private bool glowTransitioning;
+	private Color targetGlowColor;
+	private Color previousGlowColor;
+	private float glowTransitionTimer;
+	private Color glowAlphaColor;
+	
 	private void Restart()
 	{
 		growth = 0;
 		endSegment = 1;
+		line.drawEnd = 1;
 		lastSegment = 0;
 		finishPoint.x = transform.position.x;
 		finishPoint.y = transform.position.y;
 		AddCurve();
+		lowPoint = line.points2[0];
+		highPoint = line.points2[1];
 	}
 
 	private void AddCurve()
@@ -187,10 +256,10 @@ public class Plant : MonoBehaviour {
 		Vector2[] splinePoints = new Vector2[3];;
 		splinePoints[0] = startPoint;
 		float splineCurveHeight = Random.Range(minSplineHeight, maxSplineHeight);
-		float upperYCoord = splineCurveHeight * height + startPoint.y;
+		float upperYCoord = splineCurveHeight * screenHeight + startPoint.y;
 		splineSide = !splineSide;
-		splinePoints[1] = new Vector2(startPoint.x + Random.Range(minSplineOffset, maxSplineOffset) * height * (splineSide ? 1 : -1), 
-		                              Random.Range(startPoint.y + minSplineYSeperation * splineCurveHeight * height, upperYCoord - minSplineYSeperation * splineCurveHeight * height));
+		splinePoints[1] = new Vector2(startPoint.x + Random.Range(minSplineOffset, maxSplineOffset) * screenHeight * (splineSide ? 1 : -1), 
+		                              Random.Range(startPoint.y + minSplineYSeperation * splineCurveHeight * screenHeight, upperYCoord - minSplineYSeperation * splineCurveHeight * screenHeight));
 		finishPoint = new Vector2(startPoint.x, upperYCoord);
 		splinePoints[2] = finishPoint;
 		
@@ -218,29 +287,31 @@ public class Plant : MonoBehaviour {
 			angle = lastAngle;
 			flipControlPoint = !lastControlPointFlipped;
 		}
+		lastControlPointFlipped = flipControlPoint;
+		Debug.Log ("flipControlPoint: " + flipControlPoint);
 		Debug.Log ("angle 1: " + angle);
-		float controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * height;
-		Debug.Log ("controlLength 1: " + controlLength / height);
+		float controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * screenHeight;
+		Debug.Log ("controlLength 1: " + controlLength / screenHeight);
 		Vector2 controlPointOffset = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength);
 		Debug.Log ("controlPointOffset 1 : " + controlPointOffset);
 		curvePoints [1].x = startPoint.x + controlPointOffset.x * (flipControlPoint ? 1 : -1);
 		curvePoints [1].y = startPoint.y + controlPointOffset.y;
 		float bezierCurveHeight =  Random.Range(minBezierCurveHeight, maxBezierCurveHeight);
-		finishPoint = new Vector2(startPoint.x, startPoint.y + bezierCurveHeight * height);
+		finishPoint = new Vector2(startPoint.x, startPoint.y + bezierCurveHeight * screenHeight);
 		curvePoints[2] = finishPoint;
 		angle = Random.Range (minBezierAngle, maxBezierAngle);
 		lastAngle = angle;
 		Debug.Log ("angle 2: " + angle);
-		controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * height;
-		Debug.Log ("controlLenght 2: " + controlLength / height);
+		controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * screenHeight;
+		Debug.Log ("controlLenght 2: " + controlLength / screenHeight);
 		controlPointOffset = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength);
 		Debug.Log ("controlPointOffset 2 : " + controlPointOffset);
-		lastControlPointFlipped = (Random.Range (0, 2) == 0);
-		curvePoints[3].x = finishPoint.x + controlPointOffset.x * (lastControlPointFlipped ? 1 : -1);
+		curvePoints[3].x = finishPoint.x + controlPointOffset.x * (flipControlPoint ? 1 : -1);
 		curvePoints[3].y = finishPoint.y - controlPointOffset.y;
 		int segments = Mathf.RoundToInt(segmentsPerScreen * bezierCurveHeight);
 		Debug.Log("segments: " + segments);
 		line.MakeCurve (curvePoints, segments, lastSegment);
+		glowLine.points2 = line.points2;
 		lastSegment += segments;
 		
 		if (drawDebugMarks)
@@ -270,15 +341,39 @@ public class Plant : MonoBehaviour {
 			glow = newGlow;
 			if (glow)
 			{
-				line.material = glowMaterial;
-				//line.joins = Joins.None;
+				targetGlowColor = veryHealthyColor;
+				glowLine.active = true;
 			}
 			else
 			{
-				line.material = normalMaterial;
-				//line.joins = Joins.Weld;
+				targetGlowColor = glowAlphaColor;
 			}
 		}
+		previousGlowColor = glowLine.color;
+		glowTransitioning = true;
+		glowTransitionTimer = 0;
+	}
+	
+	private void UpdateWidth()
+	{
+		float[] widths = new float[line.points2.Length - 1];
+		float[] glowWidths = new float[line.points2.Length - 1];
+		float widest = lineWidth + growth * widthGrowFactor;
+		float max = line.drawEnd;
+		for(int i=0; i < max; i++)
+		{
+			//widths[(int)i] = Mathf.Lerp(widest, lineWidth, (float)i/max);
+			widths[(int)i] = Mathf.Clamp(Mathf.Lerp(widest, lineWidth, (float)i/max), 0, maxWidth);
+			glowWidths[i] = Mathf.Clamp(widths[i] * glowLineWidthScaler, 0, maxWidth * glowLineWidthScaler);
+		}
+		float glowLineWidth = lineWidth * glowLineWidthScaler;
+		for(int i=(int)max; i< widths.Length; i++)
+		{
+			widths[i] = lineWidth;
+			glowWidths[i] = glowLineWidth;
+		}
+		line.SetWidths(widths);
+		glowLine.SetWidths(glowWidths);
 	}
 	#endregion
 }

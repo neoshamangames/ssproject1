@@ -56,11 +56,11 @@ function Start () {
 
 function SetLine () {
 	if (useDottedLine) {
-		line = new VectorLine("Curve", linePoints, dottedLineMaterial, 8.0, LineType.Continuous, Joins.Weld);
+		line = new VectorLine("Curve", linePoints, dottedLineMaterial, 100.0, LineType.Continuous, Joins.Weld);
 		line.depth = 1;
 	}
 	else {
-		line = new VectorLine("Curve", linePoints, lineMaterial, 8.0, LineType.Continuous);
+		line = new VectorLine("Curve", linePoints, lineMaterial, 20.0, LineType.Continuous, Joins.Weld);
 		line.depth = 1;		
 	}
 }

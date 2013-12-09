@@ -50,6 +50,15 @@
      <Compile Include="Assets\Plugins\Vectrosity\Image Based\ImageEffectBase.cs" />
      <Compile Include="Assets\Plugins\Vectrosity\Image Based\ImageEffects.cs" />
      <Compile Include="Assets\Plugins\Vectrosity\MultiDim.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\BrightnessControl.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\LineManager.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\RefInt.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\VectorChar.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\VectorLine.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\VectorManager.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\VisibilityControl.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\VisibilityControlAlways.cs" />
+     <Compile Include="Assets\Plugins\VectrosityScripts\VisibilityControlStatic.cs" />
      <None Include="Assets\VectrosityDemos\Shaders\ParticleZwrite.shader" />
      <None Include="Assets\VectrosityDemos\Shaders\Unlit .shader" />
      <None Include="Assets\VectrosityDemos\Shaders\UnlitAlpha.shader" />
