@@ -1,12 +1,12 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\CameraManager.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\Cloud.cs">
     <Files>
       <File FileName="..\VectrocityTest\Assets\Test.cs" Line="50" Column="18" />
-      <File FileName="Assets\VectrosityDemos\Scripts\Curve\DrawCurve.js" Line="153" Column="56" />
-      <File FileName="Assets\Scripts\Plant.cs" Line="21" Column="16" />
+      <File FileName="Assets\Scripts\Plant.cs" Line="109" Column="22" />
       <File FileName="Assets\Scripts\SingletonMonoBehaviour.cs" Line="20" Column="4" />
-      <File FileName="Assets\Scripts\CameraManager.cs" Line="8" Column="21" />
+      <File FileName="Assets\Scripts\CameraManager.cs" Line="46" Column="4" />
+      <File FileName="Assets\Scripts\Cloud.cs" Line="76" Column="3" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

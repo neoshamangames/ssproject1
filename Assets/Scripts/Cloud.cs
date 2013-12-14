@@ -45,26 +45,8 @@ public class Cloud : MonoBehaviour {
 		float cloudGrey = Mathf.Lerp(1, darkestGrey, cloudPercentage);
 		spriteRenderer.color = new Color(cloudGrey, cloudGrey, cloudGrey);
 		
-		raining = false;
-		#if UNITY_EDITOR
-		if (Input.GetMouseButton(0))
-		{
-			ProcessTouch(Input.mousePosition);
-		}
-		else
-		#else
-		#if UNITY_ANDROID || UNITY_IPHONE
-		if (Input.touches.Length > 0)
-		{
-			firstTouch = Input.touches[0];
-			if (firstTouch.phase != TouchPhase.Ended && firstTouch.phase != TouchPhase.Canceled)
-			{
-				ProcessTouch(firstTouch.position);
-			}
-		}
-		else
-		#endif
-		#endif
+		ProcessRain();
+		if (!raining)
 		{
 			if (currentScale.x < maxSize)
 			{
@@ -72,9 +54,21 @@ public class Cloud : MonoBehaviour {
 				ScaleCloud(grow);
 			}
 		}
-		ProcessRain();
+		raining = false;
 	}
 	
+	#endregion
+	
+	#region Actions
+	public void Rain(float deltaTime)
+	{
+		if (currentScale.x > 0)
+		{
+			raining = true;
+			float rain = -deltaTime * rainRate;
+			ScaleCloud(rain);
+		}
+	}
 	#endregion
 	
 	#region Private
@@ -88,21 +82,9 @@ public class Cloud : MonoBehaviour {
 	private List<float> raindropTimers;
 	private List<float> raindropLengths;
 	Touch firstTouch;
+	Touch secondTouch;
 	
-	private void ProcessTouch(Vector2 coordinates)
-	{
-		if (currentScale.x > 0)
-		{
-			Ray ray = mainCam.ScreenPointToRay(coordinates);
-			RaycastHit hit;
-			if (Physics.Raycast(ray, out hit))
-			{
-				raining = true;
-				float rain = -Time.deltaTime * rainRate;
-				ScaleCloud(rain);
-			}
-		}
-	}
+	
 	
 	private void ScaleCloud(float scale)
 	{
