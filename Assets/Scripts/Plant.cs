@@ -21,10 +21,10 @@ public class Plant : MonoBehaviour {
 	[Range(0, 50)] public float growSegmentsPerSecond = .1f;
 	[Range(0, 5)]public float stateTransitionSeconds = 1f;
 	[Range(5, 1000)]public int segmentsPerScreen = 50;
-	[Range(.1f, 20)]public float lineWidth = 1f;
+	[Range(0, 500)]public float lineWidth = 1f;
 	[Range(.1f, 3f)]public float glowLineWidthScaler = 1.5f;
 	[Range(0f, 1f)]public float widthGrowFactor = 0f;
-	[Range(.1f, 20)]public float maxWidth = 3f;
+	[Range(.1f, 500)]public float maxWidth = 3f;
 	[Range(0, 45)] public float minBezierAngle = 5f;
 	[Range(0, 45)] public float maxBezierAngle = 30f;
 	[Range(0, 1)] public float minBezierControlLength = .05f;
@@ -40,24 +40,27 @@ public class Plant : MonoBehaviour {
 	#endregion
 	
 	#region Properties
-	public float Height
+	public Vector3 TopPosisiton
 	{
-		get { return line.points2[line.drawEnd].y; }
+		get { return line.points3[line.drawEnd] + transform.position; }
 	}
 	#endregion
 
 	#region Unity
-	void Awake()
+	void Start()
 	{
 		//setup camera
+		mainCam = Camera.main;
+		depth = transform.position.z;
 		screenHeight = CameraManager.Instance.Height;
-		line = new VectorLine ("Plant", new Vector2[MAX_POINTS - 2], healthyColor, normalMaterial, lineWidth, LineType.Continuous, Joins.Weld);
+		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], healthyColor, normalMaterial, lineWidth, LineType.Continuous, Joins.Weld);
+		line.vectorObject.transform.position = transform.position;
 		glowAlphaColor = new Color(veryHealthyColor.r, veryHealthyColor.g, veryHealthyColor.b, 0);
-		glowLine = new VectorLine ("PlantGlow", new Vector2[MAX_POINTS - 2], glowAlphaColor, glowMaterial, lineWidth * glowLineWidthScaler, LineType.Continuous, Joins.Weld);
+		glowLine = new VectorLine ("PlantGlow", new Vector3[MAX_POINTS - 2], glowAlphaColor, glowMaterial, lineWidth * glowLineWidthScaler, LineType.Continuous, Joins.Weld);
 		glowLine.active = false;
-		controlLine1 = new VectorLine ("Control Line 1", new Vector2[2], Color.red, null, .02f);
-		controlLine2 = new VectorLine ("Control Line 2", new Vector2[2], Color.red, null, .02f);
-		curvePoints = new Vector2[4];
+		controlLine1 = new VectorLine ("Control Line 1", new Vector3[2], Color.red, null, .02f);
+		controlLine2 = new VectorLine ("Control Line 2", new Vector3[2], Color.red, null, .02f);
+		curvePoints = new Vector3[4];
 		startPoint.x = transform.position.x;
 		startPoint.y = transform.position.y;
 		finishPoint.x = transform.position.x;
@@ -75,11 +78,11 @@ public class Plant : MonoBehaviour {
 
 		//DrawPlant ();
 		AddCurve();
-		lowPoint = line.points2[0];
-		highPoint = line.points2[1];
-		glowLine.Draw();
-		line.Draw();
-		points = new VectorPoints("Points", new Vector2[]{lowPoint, highPoint}, dotMaterial, 2.0f);
+		lowPoint = line.points3[0];
+		highPoint = line.points3[1];
+		glowLine.Draw3D();
+		line.Draw3D();
+		points = new VectorPoints("Points", new Vector3[]{lowPoint, highPoint}, dotMaterial, 2.0f);
 		//points.Draw();
 	}
 
@@ -100,21 +103,21 @@ public class Plant : MonoBehaviour {
 			{
 				AddCurve();
 			}
-			line.points2[intPart] = Vector2.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);;
+			line.points3[intPart] = Vector3.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);;
 			lowPoint = highPoint;
-			highPoint = line.points2[intPart + 1];
+			highPoint = line.points3[intPart + 1];
 			endSegment = intPart + 1;
 			line.drawEnd = endSegment;
 			glowLine.drawEnd = endSegment;
 			//VectorLine.Destroy(ref points);
-			//points = new VectorPoints("Points", new Vector2[]{lowPoint, highPoint}, dotMaterial, 2.0f);
+			//points = new VectorPoints("Points", new Vector3[]{lowPoint, highPoint}, dotMaterial, 2.0f, 0);
 			//points.Draw();
 			
 			//Debug.Log ("lowPoint: " + lowPoint);
 			//Debug.Log ("highPoint: " + highPoint);
 		}
 		UpdateWidth();
-		line.points2[intPart + 1] = Vector2.Lerp(lowPoint, highPoint, decPart);
+		line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
 
 		if (transitioning)
 		{
@@ -148,10 +151,11 @@ public class Plant : MonoBehaviour {
 					glowLine.active = false;
 			}
 		}
-		glowLine.Draw();
-		line.Draw();
+		glowLine.Draw3D();
+		line.Draw3D();
 	}
 
+/*
 	void OnGUI()
 	{
 		if (GUI.Button (new Rect (10, 30, 90, 30), "Healthy")) {
@@ -184,34 +188,37 @@ public class Plant : MonoBehaviour {
 			
 		if (GUI.Button (new Rect (10, 270, 90, 30), "Print Points"))
 		{
-			for(int i=0; i < line.points2.Length; i++)
-				Debug.Log("points[" + i + "]: " + line.points2[i]);
+			for(int i=0; i < line.points3.Length; i++)
+				Debug.Log("points[" + i + "]: " + line.points3[i]);
 		}
 			
 	}
+	*/
 	#endregion
 
 	#region Private
 	private const int MAX_POINTS = 16384;
 	private const float DROP_BACK_PERCENT = .95f;
-	private Vector2[] curvePoints;
+	private Vector3[] curvePoints;
 	private VectorLine line;
 	private VectorLine glowLine;
 	private VectorLine controlLine1;
 	private VectorLine controlLine2;
-	private Vector2 startPoint;
+	private Vector3 startPoint;
 	private float screenHeight;
 	private float growth = 0;
 	private int endSegment = 1;
 	private int lastSegment = 0;
-	private Vector2 finishPoint;
+	private Vector3 finishPoint;
 	private float lastAngle;
 	private bool lastControlPointFlipped;
 	private bool splineSide;
 	private bool glow;
+	private Camera mainCam;
+	private float depth;
 	
-	private Vector2 lowPoint;
-	private Vector2 highPoint;
+	private Vector3 lowPoint;
+	private Vector3 highPoint;
 	
 	VectorPoints points;
 	
@@ -238,8 +245,8 @@ public class Plant : MonoBehaviour {
 		finishPoint.x = transform.position.x;
 		finishPoint.y = transform.position.y;
 		AddCurve();
-		lowPoint = line.points2[0];
-		highPoint = line.points2[1];
+		lowPoint = line.points3[0];
+		highPoint = line.points3[1];
 	}
 
 	private void AddCurve()
@@ -253,14 +260,14 @@ public class Plant : MonoBehaviour {
 	private void AddSpline()
 	{
 		startPoint = finishPoint;
-		Vector2[] splinePoints = new Vector2[3];;
+		Vector3[] splinePoints = new Vector3[3];;
 		splinePoints[0] = startPoint;
 		float splineCurveHeight = Random.Range(minSplineHeight, maxSplineHeight);
 		float upperYCoord = splineCurveHeight * screenHeight + startPoint.y;
 		splineSide = !splineSide;
-		splinePoints[1] = new Vector2(startPoint.x + Random.Range(minSplineOffset, maxSplineOffset) * screenHeight * (splineSide ? 1 : -1), 
+		splinePoints[1] = new Vector3(startPoint.x + Random.Range(minSplineOffset, maxSplineOffset) * screenHeight * (splineSide ? 1 : -1), 
 		                              Random.Range(startPoint.y + minSplineYSeperation * splineCurveHeight * screenHeight, upperYCoord - minSplineYSeperation * splineCurveHeight * screenHeight));
-		finishPoint = new Vector2(startPoint.x, upperYCoord);
+		finishPoint = new Vector3(startPoint.x, upperYCoord);
 		splinePoints[2] = finishPoint;
 		
 		if (drawDebugMarks)
@@ -288,36 +295,36 @@ public class Plant : MonoBehaviour {
 			flipControlPoint = !lastControlPointFlipped;
 		}
 		lastControlPointFlipped = flipControlPoint;
-		Debug.Log ("flipControlPoint: " + flipControlPoint);
-		Debug.Log ("angle 1: " + angle);
+//		Debug.Log ("flipControlPoint: " + flipControlPoint);
+//		Debug.Log ("angle 1: " + angle);
 		float controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * screenHeight;
-		Debug.Log ("controlLength 1: " + controlLength / screenHeight);
-		Vector2 controlPointOffset = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength);
-		Debug.Log ("controlPointOffset 1 : " + controlPointOffset);
+//		Debug.Log ("controlLength 1: " + controlLength / screenHeight);
+		Vector3 controlPointOffset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength, 0);
+//		Debug.Log ("controlPointOffset 1 : " + controlPointOffset);
 		curvePoints [1].x = startPoint.x + controlPointOffset.x * (flipControlPoint ? 1 : -1);
 		curvePoints [1].y = startPoint.y + controlPointOffset.y;
 		float bezierCurveHeight =  Random.Range(minBezierCurveHeight, maxBezierCurveHeight);
-		finishPoint = new Vector2(startPoint.x, startPoint.y + bezierCurveHeight * screenHeight);
+		finishPoint = new Vector3(startPoint.x, startPoint.y + bezierCurveHeight * screenHeight, 0);
 		curvePoints[2] = finishPoint;
 		angle = Random.Range (minBezierAngle, maxBezierAngle);
 		lastAngle = angle;
-		Debug.Log ("angle 2: " + angle);
+//		Debug.Log ("angle 2: " + angle);
 		controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * screenHeight;
-		Debug.Log ("controlLenght 2: " + controlLength / screenHeight);
-		controlPointOffset = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength);
-		Debug.Log ("controlPointOffset 2 : " + controlPointOffset);
+//		Debug.Log ("controlLenght 2: " + controlLength / screenHeight);
+		controlPointOffset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength, 0);
+//		Debug.Log ("controlPointOffset 2 : " + controlPointOffset);
 		curvePoints[3].x = finishPoint.x + controlPointOffset.x * (flipControlPoint ? 1 : -1);
 		curvePoints[3].y = finishPoint.y - controlPointOffset.y;
 		int segments = Mathf.RoundToInt(segmentsPerScreen * bezierCurveHeight);
-		Debug.Log("segments: " + segments);
+//		Debug.Log("segments: " + segments);
 		line.MakeCurve (curvePoints, segments, lastSegment);
-		glowLine.points2 = line.points2;
+		glowLine.points3 = line.points3;
 		lastSegment += segments;
 		
 		if (drawDebugMarks)
 		{
-			controlLine1.points2 = new Vector2[] {startPoint, new Vector2 (curvePoints [1].x, curvePoints [1].y)};
-			controlLine2.points2 = new Vector2[] {finishPoint, new Vector2(curvePoints [3].x, curvePoints [3].y)};
+			controlLine1.points3 = new Vector3[] {startPoint, new Vector3(curvePoints [1].x, curvePoints [1].y, 0)};
+			controlLine2.points3 = new Vector3[] {finishPoint, new Vector3(curvePoints [3].x, curvePoints [3].y, 0)};
 			controlLine1.Draw();
 			controlLine2.Draw();
 		}
@@ -356,20 +363,24 @@ public class Plant : MonoBehaviour {
 	
 	private void UpdateWidth()
 	{
-		float[] widths = new float[line.points2.Length - 1];
-		float[] glowWidths = new float[line.points2.Length - 1];
-		float widest = lineWidth + growth * widthGrowFactor;
+		float[] widths = new float[line.points3.Length - 1];
+		float[] glowWidths = new float[line.points3.Length - 1];
+		float oneUnit = mainCam.WorldToScreenPoint(new Vector3(1, 0, 0)).x - mainCam.WorldToScreenPoint(Vector3.zero).x;
+		Debug.Log("oneUnit: " + oneUnit);
+		float perspLineWidth = lineWidth;
+		float widest = perspLineWidth + growth * widthGrowFactor;
+		Debug.Log("widest: " + widest);
 		float max = line.drawEnd;
 		for(int i=0; i < max; i++)
 		{
-			//widths[(int)i] = Mathf.Lerp(widest, lineWidth, (float)i/max);
-			widths[(int)i] = Mathf.Clamp(Mathf.Lerp(widest, lineWidth, (float)i/max), 0, maxWidth);
+//			widths[(int)i] = Mathf.Lerp(widest, lineWidth, (float)i/max);
+			widths[(int)i] = Mathf.Clamp(Mathf.Lerp(widest, perspLineWidth, (float)i/max), 0, maxWidth) * oneUnit;
 			glowWidths[i] = Mathf.Clamp(widths[i] * glowLineWidthScaler, 0, maxWidth * glowLineWidthScaler);
 		}
-		float glowLineWidth = lineWidth * glowLineWidthScaler;
+		float glowLineWidth = perspLineWidth * glowLineWidthScaler;
 		for(int i=(int)max; i< widths.Length; i++)
 		{
-			widths[i] = lineWidth;
+			widths[i] = perspLineWidth * oneUnit;
 			glowWidths[i] = glowLineWidth;
 		}
 		line.SetWidths(widths);
