@@ -8,8 +8,9 @@ public class Cloud : MonoBehaviour {
 	#region Attributes
 	public Material raindropMaterial;
 	public Transform raindropRoot;
+	public Plant plant;
 	[Range(0, 1)]public float growthRate;
-	[Range(0, 1)]public float rainRate;
+	[Range(0, 1)]public float depletionRate;
 	[Range(0, 5)]public float maxSize = 2f;
 	[Range(0, 1)]public float darkestGrey = .25f;
 	[Range(0, 100)]public float dropsPerFrameMax = .05f;
@@ -18,12 +19,12 @@ public class Cloud : MonoBehaviour {
 	public float raindropBottomEdge = -2.4f;
 	public float raindropAreaMaxWidth = 3.5f;
 	public float raindropAreaMinWidth = .5f;
-	[Range(0, 1)]public float bottomRaindropThickness = .1f;
-	[Range(0, 1)]public float topRaindropThickness = .5f;
-	[Range(0, 1)]public float minRaindropLength = .1f;
-	[Range(0, 3)]public float maxRaindropLength = 1f;
+	[Range(0, 10)]public float bottomRaindropThickness = .1f;
+	[Range(0, 10)]public float topRaindropThickness = .5f;
+	[Range(0, 500)]public float minRaindropLength = .1f;
+	[Range(0, 500)]public float maxRaindropLength = 1f;
 	[Range(0, 1)]public float raindropLengthVariety = .01f;
-	[Range(0, 10)]public float raindropSpeed = 1f;
+	[Range(0, 500)]public float raindropSpeed = 10f;
 	[Range(0, 2)]public float startSize = 1f;
 	#endregion
 
@@ -31,7 +32,6 @@ public class Cloud : MonoBehaviour {
 	void Awake()
 	{
 		transform.localScale = new Vector3(startSize, startSize, 1);
-		mainCam = Camera.main;
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
 		raindropTimers = new List<float>();
@@ -65,15 +65,15 @@ public class Cloud : MonoBehaviour {
 		if (currentScale.x > 0)
 		{
 			raining = true;
-			float rain = -deltaTime * rainRate;
+			float rain = -deltaTime * depletionRate;
 			ScaleCloud(rain);
+			plant.Water();
 		}
 	}
 	#endregion
 	
 	#region Private
 	private const int MAX_RAIN_DROPS = 500;
-	private Camera mainCam;
 	private Vector3 currentScale;
 	private bool raining;
 	private SpriteRenderer spriteRenderer;
@@ -149,9 +149,10 @@ public class Cloud : MonoBehaviour {
 		drop.smoothWidth = true;
 		drop.SetWidths(new float[]{topRaindropThickness, bottomRaindropThickness});
 		drop.vectorObject.transform.parent = raindropRoot;
-		Vector3 pos = drop.vectorObject.transform.localPosition;
-		pos.y = 0;
-		drop.vectorObject.transform.localPosition = pos;
+		drop.vectorObject.layer = LayerMask.NameToLayer("Cloud");
+//		Vector3 pos = drop.vectorObject.transform.localPosition;
+//		pos.y = 0;
+//		drop.vectorObject.transform.localPosition = pos;
 		drop.Draw();
 		raindrops.Add(drop);
 		raindropTimers.Add(0);
