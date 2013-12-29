@@ -37,12 +37,23 @@ public class Plant : MonoBehaviour {
 	[Range(0, 1)]public float minSplineOffset = 0f;
 	[Range(0, 1)]public float maxSplineOffset = .25f;
 	[Range(0, 1)]public float minSplineYSeperation = .25f;
+	[Range(0, 10)]public float widthScaler = 1f;
+	[Range(0, 1)]public float veryHealthyRange = .05f;
+	[Range(0, 1)]public float healthyRange = .125f;
+	[Range(0, 1)]public float aliveRange = .35f;
+	public float waterPerSecond = .001f;
+	public float dryPerSecond = .00001f;
 	#endregion
 	
 	#region Properties
 	public Vector3 TopPosisiton
 	{
 		get { return line.points3[line.drawEnd] + transform.position; }
+	}
+	
+	public Vector3 BasePosisiton
+	{
+		get { return line.points3[0] + transform.position; }
 	}
 	#endregion
 
@@ -52,12 +63,14 @@ public class Plant : MonoBehaviour {
 		//setup camera
 		mainCam = Camera.main;
 		depth = transform.position.z;
+		initialOneUnit = mainCam.WorldToScreenPoint(new Vector3(1, 0, depth)).x - mainCam.WorldToScreenPoint(new Vector3(0, 0, depth)).x;
+		Debug.Log("depth: " + depth);
 		screenHeight = CameraManager.Instance.Height;
-		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], healthyColor, normalMaterial, lineWidth, LineType.Continuous, Joins.Weld);
+		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], veryHealthyColor, normalMaterial, lineWidth, LineType.Continuous, Joins.Weld);
 		line.vectorObject.transform.position = transform.position;
 		glowAlphaColor = new Color(veryHealthyColor.r, veryHealthyColor.g, veryHealthyColor.b, 0);
 		glowLine = new VectorLine ("PlantGlow", new Vector3[MAX_POINTS - 2], glowAlphaColor, glowMaterial, lineWidth * glowLineWidthScaler, LineType.Continuous, Joins.Weld);
-		glowLine.active = false;
+		glowLine.active = true;
 		controlLine1 = new VectorLine ("Control Line 1", new Vector3[2], Color.red, null, .02f);
 		controlLine2 = new VectorLine ("Control Line 2", new Vector3[2], Color.red, null, .02f);
 		curvePoints = new Vector3[4];
@@ -84,41 +97,55 @@ public class Plant : MonoBehaviour {
 		line.Draw3D();
 		points = new VectorPoints("Points", new Vector3[]{lowPoint, highPoint}, dotMaterial, 2.0f);
 		//points.Draw();
+		
+		witheredThreshold = OPTIMUM_SATURATION - aliveRange/2;
+		witheringThreshold = OPTIMUM_SATURATION - healthyRange/2;
+		healthyDryThreshold = OPTIMUM_SATURATION - veryHealthyRange/2;
+		healthyWetThreshold = OPTIMUM_SATURATION + veryHealthyRange/2;
+		drowningThreshold = OPTIMUM_SATURATION + healthyRange/2;
+		drownedThreshold = OPTIMUM_SATURATION + aliveRange/2;
 	}
 
 	void Update()
 	{
-		growth += Time.deltaTime * growSegmentsPerSecond;
-		int intPart = Mathf.FloorToInt(growth);
-		float decPart = growth % 1;
-
-		if (intPart >= endSegment) {
-			//Debug.Log("growth: " + growth + ". intPart: " + intPart + ". decPart: " + decPart);
-//			if (decPart < SKIP_TO_DEC)
-//			{
-//				decPart = SKIP_TO_DEC;
-//				growth = intPart + decPart;
-//			}
-			if (intPart == lastSegment)
-			{
-				AddCurve();
+		if (state != PlantState.Dead)
+		{
+			growth += Time.deltaTime * growSegmentsPerSecond;
+			int intPart = Mathf.FloorToInt(growth);
+			float decPart = growth % 1;
+	
+			if (intPart >= endSegment) {
+				//Debug.Log("growth: " + growth + ". intPart: " + intPart + ". decPart: " + decPart);
+	//			if (decPart < SKIP_TO_DEC)
+	//			{
+	//				decPart = SKIP_TO_DEC;
+	//				growth = intPart + decPart;
+	//			}
+				if (intPart == lastSegment)
+				{
+					AddCurve();
+				}
+				line.points3[intPart] = Vector3.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);;
+				lowPoint = highPoint;
+				highPoint = line.points3[intPart + 1];
+				endSegment = intPart + 1;
+				line.drawEnd = endSegment;
+				glowLine.drawEnd = endSegment;
+				//VectorLine.Destroy(ref points);
+				//points = new VectorPoints("Points", new Vector3[]{lowPoint, highPoint}, dotMaterial, 2.0f, 0);
+				//points.Draw();
+				
+				//Debug.Log ("lowPoint: " + lowPoint);
+				//Debug.Log ("highPoint: " + highPoint);
 			}
-			line.points3[intPart] = Vector3.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);;
-			lowPoint = highPoint;
-			highPoint = line.points3[intPart + 1];
-			endSegment = intPart + 1;
-			line.drawEnd = endSegment;
-			glowLine.drawEnd = endSegment;
-			//VectorLine.Destroy(ref points);
-			//points = new VectorPoints("Points", new Vector3[]{lowPoint, highPoint}, dotMaterial, 2.0f, 0);
-			//points.Draw();
-			
-			//Debug.Log ("lowPoint: " + lowPoint);
-			//Debug.Log ("highPoint: " + highPoint);
+			UpdateWidth();
+			line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
+	
+			UpdateSaturation();
 		}
-		UpdateWidth();
-		line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
 
+		
+			
 		if (transitioning)
 		{
 			transitionTimer += Time.deltaTime;
@@ -195,6 +222,14 @@ public class Plant : MonoBehaviour {
 	}
 	*/
 	#endregion
+	public void Water()
+	{
+		saturation += Time.deltaTime * waterPerSecond;
+	}
+	
+	#region Actions
+	
+	#endregion
 
 	#region Private
 	private const int MAX_POINTS = 16384;
@@ -216,13 +251,24 @@ public class Plant : MonoBehaviour {
 	private bool glow;
 	private Camera mainCam;
 	private float depth;
+	private float initialOneUnit;
 	
 	private Vector3 lowPoint;
 	private Vector3 highPoint;
 	
 	VectorPoints points;
+	private const float OPTIMUM_SATURATION = .5f;
+	private float saturation = OPTIMUM_SATURATION;
+	private float healthyWetThreshold;
+	private float healthyDryThreshold;
+	private float drowningThreshold;
+	private float drownedThreshold;
+	private float witheringThreshold;
+	private float witheredThreshold;
 	
 	//color transition
+	private enum PlantState {Dead, Drowning, HealthyWet, VeryHealthy, HealthyDry, Withering};
+	private PlantState state = PlantState.VeryHealthy;
 	private bool transitioning;
 	private Color targetColor;
 	private Color previousColor;
@@ -334,6 +380,10 @@ public class Plant : MonoBehaviour {
 	{
 		if (line.color != newColor)
 		{
+			if (newColor == veryHealthyColor)
+				SetGlow(true);
+			else
+				SetGlow(false);
 			previousColor = line.color;
 			targetColor = newColor;
 			transitioning = true;
@@ -365,26 +415,102 @@ public class Plant : MonoBehaviour {
 	{
 		float[] widths = new float[line.points3.Length - 1];
 		float[] glowWidths = new float[line.points3.Length - 1];
-		float oneUnit = mainCam.WorldToScreenPoint(new Vector3(1, 0, 0)).x - mainCam.WorldToScreenPoint(Vector3.zero).x;
-		Debug.Log("oneUnit: " + oneUnit);
-		float perspLineWidth = lineWidth;
-		float widest = perspLineWidth + growth * widthGrowFactor;
-		Debug.Log("widest: " + widest);
+		float oneUnit = mainCam.WorldToScreenPoint(new Vector3(1, 0, depth)).x - mainCam.WorldToScreenPoint(new Vector3(0, 0, depth)).x;
+		float widthScaler = oneUnit/initialOneUnit;
+		float widest = lineWidth + lineWidth * growth * widthGrowFactor;
+		
 		float max = line.drawEnd;
 		for(int i=0; i < max; i++)
 		{
 //			widths[(int)i] = Mathf.Lerp(widest, lineWidth, (float)i/max);
-			widths[(int)i] = Mathf.Clamp(Mathf.Lerp(widest, perspLineWidth, (float)i/max), 0, maxWidth) * oneUnit;
-			glowWidths[i] = Mathf.Clamp(widths[i] * glowLineWidthScaler, 0, maxWidth * glowLineWidthScaler);
+			widths[i] = Mathf.Clamp(Mathf.Lerp(widest, lineWidth, (float)i/max), 0, maxWidth) * widthScaler;
+			glowWidths[i] = widths[i] * glowLineWidthScaler;
 		}
-		float glowLineWidth = perspLineWidth * glowLineWidthScaler;
-		for(int i=(int)max; i< widths.Length; i++)
+		float glowLineWidth = lineWidth * glowLineWidthScaler;
+		for(int i=(int)max + 1; i< widths.Length; i++)
 		{
-			widths[i] = perspLineWidth * oneUnit;
+			widths[i] = lineWidth;
 			glowWidths[i] = glowLineWidth;
 		}
 		line.SetWidths(widths);
 		glowLine.SetWidths(glowWidths);
+	}
+	
+	private void UpdateSaturation()
+	{
+		saturation -= dryPerSecond * Time.deltaTime;
+//		Debug.Log("saturation: " + saturation);
+		switch (state)
+		{
+			case PlantState.Drowning:
+				if (saturation > drownedThreshold)
+				{
+					state = PlantState.Dead;
+					TransitionColor(deadColor);	
+				}
+				if (saturation < drowningThreshold)
+				{
+					state = PlantState.HealthyWet;
+					TransitionColor(healthyColor);	
+				}
+			break;
+		
+			case PlantState.HealthyWet:
+				if (saturation > drowningThreshold)
+				{
+					state = PlantState.Drowning;
+					TransitionColor(drowningColor);	
+				}
+				if (saturation < healthyWetThreshold)
+				{
+					state = PlantState.VeryHealthy;
+					TransitionColor(veryHealthyColor);	
+				}
+				break;
+		
+			case PlantState.VeryHealthy:
+				if (saturation > healthyWetThreshold)
+				{
+					state = PlantState.HealthyWet;
+					TransitionColor(healthyColor);	
+				}
+				
+				if (saturation < healthyDryThreshold)
+				{
+					state = PlantState.HealthyDry;
+					TransitionColor(healthyColor);	
+				}
+				
+				break;
+			
+			case PlantState.HealthyDry:
+				if (saturation > healthyDryThreshold)
+				{
+					state = PlantState.VeryHealthy;
+					TransitionColor(veryHealthyColor);	
+				}
+				if (saturation < witheringThreshold)
+				{
+					state = PlantState.Withering;
+					TransitionColor(witheringColor);	
+				}
+				break;
+			
+			
+			case PlantState.Withering:
+				if (saturation > witheringThreshold)
+				{
+					state = PlantState.HealthyDry;
+					TransitionColor(healthyColor);	
+				}
+				if (saturation < witheredThreshold)
+				{
+					state = PlantState.Dead;
+					TransitionColor(deadColor);	
+				}
+			
+				break;
+		}
 	}
 	#endregion
 }

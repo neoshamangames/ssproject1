@@ -8,10 +8,15 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public Camera cloudCam;
 	public Plant plant;
 	public Cloud cloud;
-	public float scrollEdge = .75f;
+	public float scrollEdgePercent = .75f;
 	public float panSensitivity = 1f;
+	public float maxXScroll = 0f;
+	public float yScrollBuffer = 2f;
 	[Range(0, 50)]public float backgroundMovementFactor = 1f;
 	[Range(0, 50)]public float mouseZoomSensitivity = 2f;
+	[Range(0, 50)]public float pinchZoomSensitivity = 2f;
+	[Range(0, 50)]public float minFOV = 40f;
+	[Range(0, 50)]public float maxFOV = 120f; 
 	#endregion
 
 	#region Properties
@@ -29,9 +34,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	#region Unity
 	void Awake() {
 		mainCam = Camera.main;
-		vectorCam = VectorLine.SetCamera(cloudCam);
 		VectorLine.SetCamera3D(mainCam);
-//		vectorCam.orthographic = false;
+		vectorCam = VectorLine.SetCamera(cloudCam);
+		vectorCam.orthographic = true;
 		vectorCam.transform.position = cloudCam.transform.position;
 //		vectorCam.transform.localScale = mainCam.transform.localScale;
 //		vectorCam.orthographicSize = mainCam.orthographicSize;
@@ -52,13 +57,19 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	void Update () {
 		//float distanceFromEdge = topEdge - plant.Height;
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
+		float plantY = plant.TopPosisiton.y;
+		bool overScrollEdge = plantY > scrollEdge;
 		if (!prevCoordsSet)
 		{
-			float scrollDelta = topEdge - plant.TopPosisiton.y;
-			if (scrollDelta < 0)
+			if (!prevOverScrollEdge && overScrollEdge)
 			{
-//				MoveCamera(new Vector3(0, -scrollDelta, 0));
+				float scrollDelta = scrollEdge - plant.TopPosisiton.y;
+				MoveCamera(new Vector3(0, -scrollDelta, 0));
 			}
+		}
+		else
+		{
+			prevOverScrollEdge = overScrollEdge;
 		}
 
 		#if UNITY_EDITOR
@@ -93,14 +104,33 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			{
 				ProcessTouch(firstTouchPos);
 			}
+			prevDistanceSet = false;
 		}
 		else
 		{
 			prevCoordsSet = false;
 			if (numOfTouches > 1)
 			{
+				Vector2 firstTouchPos = Input.touches[0].position;
+				Vector2 secondTouchPos = Input.touches[1].position;
+				Vector2 center = (firstTouchPos + secondTouchPos)/2;
 				float distance = (Vector2.Distance(Input.touches[0].position, Input.touches[1].position));
 				
+				if (prevDistanceSet)
+				{
+					float deltaDistance = prevDistance - distance;
+					if (distance != 0)
+						ProcessZoom(center, deltaDistance * pinchZoomSensitivity);
+				}
+				else
+				{
+					prevDistanceSet = true;
+				}
+				prevDistance = distance;
+			}
+			else
+			{
+				prevDistanceSet = false;
 			}
 		}
 		#endif
@@ -115,10 +145,14 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private Camera vectorCam;
 	private Camera mainCam;
 	private float topEdge;
+	private float scrollEdge;
 	private float plantDistanceFromCam;
 	private Vector2 prevCoords;
 	private bool prevCoordsSet;
 	private bool touchBeganOnCloud;
+	private bool prevOverScrollEdge;
+	private float prevDistance;
+	private bool prevDistanceSet;
 	
 	private void ProcessTouchBegan(Vector2 coordinates)
 	{
@@ -156,10 +190,21 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		Debug.Log("coordinates: " + coordinates);
 		Vector3 initialPos = mainCam.ScreenToWorldPoint(new Vector3(coordinates.x, coordinates.y, plantDistanceFromCam));
 		Debug.Log("initialPos: " + initialPos);
+		if (mainCam.fieldOfView + delta > maxFOV)
+			delta = maxFOV - mainCam.fieldOfView;
+		if (mainCam.fieldOfView + delta < minFOV)
+			delta = minFOV - mainCam.fieldOfView;
 		mainCam.fieldOfView += delta;
-//		vectorCam.fieldOfView += delta;
-		Vector3 newPos = mainCam.WorldToScreenPoint(initialPos);
-		Debug.Log("newPos: " + newPos);
+		Vector3 newCoords = mainCam.WorldToScreenPoint(initialPos);
+		mainCam.fieldOfView -= delta;
+		Vector3 newPosOriginalFOV = mainCam.ScreenToWorldPoint(new Vector3(newCoords.x, newCoords.y, plantDistanceFromCam));
+		Debug.Log("newCoords: " + newCoords);
+		Vector3 coordsDelta = (Vector2)newCoords - coordinates;
+		Vector3 posDelta = initialPos - newPosOriginalFOV;
+		MoveCamera(newPosOriginalFOV - initialPos);
+		mainCam.fieldOfView += delta;
+		Debug.Log("coordsDelta: " + coordsDelta);
+		Debug.Log("posDelta: " + posDelta);
 		CalculateEdges();
 	}
 	
@@ -167,12 +212,24 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	{
 //		Debug.Log("Move cam: " + movement);
 		mainCam.transform.position += movement;
+		Vector3 pos = mainCam.transform.position;
+		if (pos.x > maxXScroll)
+			pos.x = maxXScroll;
+		if (pos.x < -maxXScroll)
+			pos.x = -maxXScroll;
+		if (pos.y < 0)
+			pos.y = 0;
+		float maxYScroll = plant.TopPosisiton.y + yScrollBuffer;
+		if (pos.y > maxYScroll)
+			pos.y = maxYScroll;
+		mainCam.transform.position = pos;
 		CalculateEdges();
 	}
 	
 	void CalculateEdges()
 	{
-		topEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, scrollEdge, plantDistanceFromCam)).y;
+		scrollEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, scrollEdgePercent, plantDistanceFromCam)).y;
+		topEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, 1, plantDistanceFromCam)).y;
 	}
 	#endregion
 }

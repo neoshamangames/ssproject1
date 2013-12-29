@@ -8,6 +8,7 @@ public class Cloud : MonoBehaviour {
 	#region Attributes
 	public Material raindropMaterial;
 	public Transform raindropRoot;
+	public Plant plant;
 	[Range(0, 1)]public float growthRate;
 	[Range(0, 1)]public float depletionRate;
 	[Range(0, 5)]public float maxSize = 2f;
@@ -66,6 +67,7 @@ public class Cloud : MonoBehaviour {
 			raining = true;
 			float rain = -deltaTime * depletionRate;
 			ScaleCloud(rain);
+			plant.Water();
 		}
 	}
 	#endregion
@@ -147,7 +149,7 @@ public class Cloud : MonoBehaviour {
 		drop.smoothWidth = true;
 		drop.SetWidths(new float[]{topRaindropThickness, bottomRaindropThickness});
 		drop.vectorObject.transform.parent = raindropRoot;
-		drop.vectorObject.tag = "Cloud";
+		drop.vectorObject.layer = LayerMask.NameToLayer("Cloud");
 //		Vector3 pos = drop.vectorObject.transform.localPosition;
 //		pos.y = 0;
 //		drop.vectorObject.transform.localPosition = pos;
