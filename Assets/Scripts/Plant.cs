@@ -21,7 +21,9 @@ public class Plant : MonoBehaviour {
 	public Color witheringColor;
 	public Color deadColor;
 	
-	[Range(0, 50)] public float growSegmentsPerSecond = .1f;
+	[Range(0, 50)] public float maxGrowthPerSecond = .1f;
+	[Range(0,1)]public float healthyGrowthFactor = .5f;
+	[Range(0,1)]public float unHealthyGrowthFactor = .25f;
 	[Range(0, 5)]public float stateTransitionSeconds = 1f;
 	[Range(5, 1000)]public int segmentsPerScreen = 50;
 	[Range(0, 500)]public float lineWidth = 1f;
@@ -117,7 +119,7 @@ public class Plant : MonoBehaviour {
 	{
 		if (state != PlantState.Dead)
 		{
-			growth += Time.deltaTime * growSegmentsPerSecond;
+			growth += Time.deltaTime * maxGrowthPerSecond * growthFactor;
 			int intPart = Mathf.FloorToInt(growth);
 			float decPart = growth % 1;
 	
@@ -132,7 +134,7 @@ public class Plant : MonoBehaviour {
 				{
 					AddCurve();
 				}
-				line.points3[intPart] = Vector3.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);;
+				line.points3[intPart] = Vector3.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);
 				lowPoint = highPoint;
 				highPoint = line.points3[intPart + 1];
 				endSegment = intPart + 1;
@@ -242,11 +244,11 @@ public class Plant : MonoBehaviour {
 	#region Private
 	private const int MAX_POINTS = 16384;
 	private const float DROP_BACK_PERCENT = .95f;
-	private Vector3[] curvePoints;
+	private float growthFactor = 1f;
+	
 	private VectorLine line;
 	private VectorLine glowLine;
-	private VectorLine controlLine1;
-	private VectorLine controlLine2;
+	
 	private Vector3 startPoint;
 	private float screenHeight;
 	private float growth = 0;
@@ -265,8 +267,12 @@ public class Plant : MonoBehaviour {
 	private Vector3 lowPoint;
 	private Vector3 highPoint;
 	
+	//bezier curve
+	private VectorLine controlLine1;
+	private VectorLine controlLine2;
 	private float controlLength;
 	private float controlLength2;
+	private Vector3[] curvePoints;
 	
 	VectorPoints points;
 	private const float OPTIMUM_SATURATION = .5f;
@@ -402,16 +408,42 @@ public class Plant : MonoBehaviour {
 		lastSegment += segments;
 	}
 
-	private void TransitionColor(Color newColor)
+	private void TransitionState(PlantState newState)
 	{
-		if (line.color != newColor)
+		if (state != newState)
 		{
-			if (newColor == veryHealthyColor)
+			state = newState;
+			if (state == PlantState.VeryHealthy)
 				SetGlow(true);
 			else
 				SetGlow(false);
+				
+			switch (state)
+			{
+			case PlantState.Dead:
+				targetColor = deadColor;
+				growthFactor = 0;
+				break;
+			case PlantState.Drowning:
+				targetColor = drowningColor;
+				growthFactor = unHealthyGrowthFactor;
+				break;
+			case PlantState.Withering:
+				targetColor = witheringColor;
+				growthFactor = unHealthyGrowthFactor;
+				break;
+			case PlantState.HealthyDry:
+			case PlantState.HealthyWet:
+				targetColor = healthyColor;
+				growthFactor = healthyGrowthFactor;
+				break;
+			case PlantState.VeryHealthy:
+				targetColor = veryHealthyColor;
+				growthFactor = 1;
+				break;
+			}
+			
 			previousColor = line.color;
-			targetColor = newColor;
 			transitioning = true;
 			transitionTimer = 0;
 		}
@@ -479,40 +511,34 @@ public class Plant : MonoBehaviour {
 			case PlantState.Drowning:
 				if (saturation > drownedThreshold)
 				{
-					state = PlantState.Dead;
-					TransitionColor(deadColor);	
+					TransitionState(PlantState.Dead);	
 				}
 				if (saturation < drowningThreshold)
 				{
-					state = PlantState.HealthyWet;
-					TransitionColor(healthyColor);	
+					TransitionState(PlantState.HealthyWet);	
 				}
 			break;
 		
 			case PlantState.HealthyWet:
 				if (saturation > drowningThreshold)
 				{
-					state = PlantState.Drowning;
-					TransitionColor(drowningColor);	
+					TransitionState(PlantState.Drowning);	
 				}
 				if (saturation < healthyWetThreshold)
 				{
-					state = PlantState.VeryHealthy;
-					TransitionColor(veryHealthyColor);	
+					TransitionState(PlantState.VeryHealthy);	
 				}
 				break;
 		
 			case PlantState.VeryHealthy:
 				if (saturation > healthyWetThreshold)
 				{
-					state = PlantState.HealthyWet;
-					TransitionColor(healthyColor);	
+					TransitionState(PlantState.HealthyWet);	
 				}
 				
 				if (saturation < healthyDryThreshold)
 				{
-					state = PlantState.HealthyDry;
-					TransitionColor(healthyColor);	
+					TransitionState(PlantState.HealthyDry);	
 				}
 				
 				break;
@@ -520,13 +546,11 @@ public class Plant : MonoBehaviour {
 			case PlantState.HealthyDry:
 				if (saturation > healthyDryThreshold)
 				{
-					state = PlantState.VeryHealthy;
-					TransitionColor(veryHealthyColor);	
+					TransitionState(PlantState.VeryHealthy);	
 				}
 				if (saturation < witheringThreshold)
 				{
-					state = PlantState.Withering;
-					TransitionColor(witheringColor);	
+					TransitionState(PlantState.Withering);	
 				}
 				break;
 			
@@ -534,13 +558,11 @@ public class Plant : MonoBehaviour {
 			case PlantState.Withering:
 				if (saturation > witheringThreshold)
 				{
-					state = PlantState.HealthyDry;
-					TransitionColor(healthyColor);	
+					TransitionState(PlantState.HealthyDry);	
 				}
 				if (saturation < witheredThreshold)
 				{
-					state = PlantState.Dead;
-					TransitionColor(deadColor);	
+					TransitionState(PlantState.Dead);	
 				}
 			
 				break;

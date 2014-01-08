@@ -226,7 +226,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		if (pos.x < -maxXScroll)
 			pos.x = -maxXScroll;
 		if (pos.y < plant.BasePosisiton.y)
-			pos.y = 0;
+			pos.y = plant.BasePosisiton.y;
 		float maxYScroll = plant.TopPosisiton.y + yScrollBuffer;
 		if (pos.y > maxYScroll)
 			pos.y = maxYScroll;
