@@ -6,6 +6,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 
 	#region Attributes
 	public Camera cloudCam;
+	public Camera plantCam;
 	public Plant plant;
 	public Cloud cloud;
 	public float scrollEdgePercent = .75f;
@@ -44,7 +45,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		vectorCam.nearClipPlane = 1;
 		vectorCam.farClipPlane = 1000;
 		height = 10;
-		width = height * Screen.width / Screen.height;
+		width = Screen.width;
 		plantDistanceFromCam = plant.transform.position.z - transform.position.z;
 		Debug.Log("plantDistanceFromCam: " + plantDistanceFromCam);
 	}
@@ -139,6 +140,13 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	}
 	#endregion
 	
+	#region Actions
+	public void ZoomOut()
+	{
+	
+	}
+	#endregion
+	
 	#region Private
 	private float height;
 	private float width;
@@ -175,9 +183,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			{
 				Vector2 deltaCoords = prevCoords - coordinates;
 				Vector3 initialPos = mainCam.ScreenToWorldPoint(new Vector3(prevCoords.x, prevCoords.y, plantDistanceFromCam));
-				Debug.Log("initialPos: " + initialPos);
+//				Debug.Log("initialPos: " + initialPos);
 				Vector3 newPos = mainCam.ScreenToWorldPoint(new Vector3(coordinates.x, coordinates.y, plantDistanceFromCam)); 
-				Debug.Log("newPos: " + newPos);
+//				Debug.Log("newPos: " + newPos);
 				MoveCamera(initialPos - newPos);
 			}
 			prevCoords = coordinates;
@@ -187,9 +195,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	private void ProcessZoom(Vector2 coordinates, float delta)
 	{
-		Debug.Log("coordinates: " + coordinates);
+//		Debug.Log("coordinates: " + coordinates);
 		Vector3 initialPos = mainCam.ScreenToWorldPoint(new Vector3(coordinates.x, coordinates.y, plantDistanceFromCam));
-		Debug.Log("initialPos: " + initialPos);
+//		Debug.Log("initialPos: " + initialPos);
 		if (mainCam.fieldOfView + delta > maxFOV)
 			delta = maxFOV - mainCam.fieldOfView;
 		if (mainCam.fieldOfView + delta < minFOV)
@@ -217,7 +225,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			pos.x = maxXScroll;
 		if (pos.x < -maxXScroll)
 			pos.x = -maxXScroll;
-		if (pos.y < 0)
+		if (pos.y < plant.BasePosisiton.y)
 			pos.y = 0;
 		float maxYScroll = plant.TopPosisiton.y + yScrollBuffer;
 		if (pos.y > maxYScroll)
