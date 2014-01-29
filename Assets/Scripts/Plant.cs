@@ -1,5 +1,6 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using Vectrosity;
 
 public class Plant : MonoBehaviour {
@@ -10,46 +11,88 @@ public class Plant : MonoBehaviour {
 	public bool drawDebugMarks;
 	public bool drawPoints;
 	public bool bezierCurves;
-	public Material normalMaterial;
-	public Material glowMaterial;
-	public Material dotMaterial;
-	public Texture2D backCapTexture;
-	public Texture2D frontCapTexture;
-	public Color healthyColor;
-	public Color veryHealthyColor;
-	public Color drowningColor;
-	public Color witheringColor;
-	public Color deadColor;
 	
-	[Range(0, 50)] public float maxGrowthPerSecond = .1f;
-	[Range(0,1)]public float healthyGrowthFactor = .5f;
-	[Range(0,1)]public float unHealthyGrowthFactor = .25f;
-	[Range(0, 5)]public float stateTransitionSeconds = 1f;
-	[Range(5, 1000)]public int segmentsPerScreen = 50;
-	[Range(0, 500)]public float lineWidth = 1f;
-	[Range(.1f, 3f)]public float glowLineWidthScaler = 1.5f;
-//	[Range(0f, 1f)]public float widthGrowFactor = 0f;
-	[Range(1f, 10000f)]public float widthGrowStretch = 100f;
-	[Range(.1f, 500)]public float maxWidth = 3f;
-	[Range(0, 45)] public float minBezierAngle = 5f;
-	[Range(0, 45)] public float maxBezierAngle = 30f;
-	[Range(0, 1)] public float minBezierControlLength = .05f;
-	[Range(0, 1)] public float maxBezierControlLength = .1f;
-	[Range(0, 1)]public float minBezierCurveHeight = .1f;
-	[Range(0, 1)]public float maxBezierCurveHeight = .5f;
-	[Range(5, 1000)]public int segmentsPerSpline = 50;
-	[Range(0, 1)]public float minSplineHeight = .1f;
-	[Range(0, 1)]public float maxSplineHeight = .5f;
-	[Range(0, 1)]public float minSplineOffset = 0f;
-	[Range(0, 1)]public float maxSplineOffset = .25f;
-	[Range(0, 1)]public float minSplineYSeperation = .25f;
-	[Range(0, 10)]public float widthScaler = 1f;
-	[Range(0, 1)]public float veryHealthyRange = .05f;
-	[Range(0, 1)]public float healthyRange = .125f;
-	[Range(0, 1)]public float aliveRange = .35f;
-	public float maxDisplayableWidth = 20f;
-	public float waterPerSecond = .001f;
-	public float dryPerSecond = .00001f;
+	[System.Serializable]
+	public class AppearanceAttributes {
+		[Range(0, 500)]public float minWidth = 1f;
+		[Range(.1f, 500)]public float maxWidth = 30f;	
+		[Range(1f, 10000f)]public float widthGrowStretch = 1000f;
+		[Range(.1f, 3f)]public float glowLineWidthScaler = .1f;
+		[Range(0, 5)]public float stateTransitionSeconds = 1f;
+		public Material normalMaterial;
+		public Material glowMaterial;
+		public Material dotMaterial;
+		public Texture2D frontCapTexture;
+		public Color healthyColor;
+		public Color veryHealthyColor;
+		public Color drowningColor;
+		public Color witheringColor;
+		public Color deadColor;
+	}
+	
+	[System.Serializable]
+	public class GrowthAttributes {
+		[Range(0, 50)] public float maxGrowthPerSecond = 1f;
+		[Range(5, 1000)]public int segmentsPerScreen = 500;
+		[Range(0,1)]public float healthyGrowthFactor = .5f;
+		[Range(0,1)]public float unHealthyGrowthFactor = .25f;
+		[Range(0, 1)]public float veryHealthyRange = .05f;
+		[Range(0, 1)]public float healthyRange = .125f;
+		[Range(0, 1)]public float aliveRange = .35f;
+		public float waterPerSecond = .01f;
+		public float dryPerSecond = .001f;
+	}
+	
+	[System.Serializable]
+	public class BezierCurveAttributes {
+		[Range(0, 45)] public float minAngle = 30f;
+		[Range(0, 45)] public float maxAngle = 45f;
+		[Range(0, 1)] public float minControlLength = .025f;
+		[Range(0, 1)] public float maxControlLength = .05f;
+		[Range(0, 1)]public float minCurveHeight = .1f;
+		[Range(0, 1)]public float maxCurveHeight = .45f;
+	}
+	
+	[System.Serializable]
+	public class SplineAttributes {
+		[Range(0, 1)]public float minHeight = .1f;
+		[Range(0, 1)]public float maxHeight = .5f;
+		[Range(0, 1)]public float minOffset = 0f;
+		[Range(0, 1)]public float maxOffset = .25f;
+		[Range(0, 1)]public float minYSeperation = .25f;
+	}
+	
+	[System.Serializable]
+	public class StemmingAttributes {
+		[Range(5, 100)]public int segmentsPer = 15;
+		[Range(0, 50)] public float maxGrowthPerSecond = .05f;
+		[Range(0, 50)] public float widthGrowth = .05f;
+		[Range(0, 1000)]public int startingPlantHeight = 250;
+		[Range(0, 1000)]public int minSeperation = 50;
+		[Range(0, 1000)]public int maxSeperation = 150;
+		[Range(.1f, 3)]public float minCurveWidth = .5f;
+		[Range(.1f, 3)]public float maxCurveWidth = 1.5f;
+		[Range(-2, 2)]public float minCurveHeight = -.2f;
+		[Range(-2, 2)]public float maxCurveHeight = .4f;
+		[Range(0, 90)] public float minControlAngle1 = 0f;
+		[Range(0, 90)] public float maxControlAngle1 = 45f;
+		[Range(0, 90)] public float minControlAngle2 = 45;
+		[Range(0, 90)] public float maxControlAngle2 = 90f;
+		[Range(0, 50)] public float minControlLength = 10f;
+		[Range(0, 50)] public float maxControlLength = 10f;
+		public float minDeathTime = 10000f;
+		public float maxDeathTime = 100000f;
+		public float fallingGravity = .05f;
+		public float fallingHorizontalMovement = -2f;
+		public float fallingRotation = -2f;
+	}
+	
+	public AppearanceAttributes appearance;
+	public GrowthAttributes growth;
+	public BezierCurveAttributes bezier;
+	public SplineAttributes spline;
+	public StemmingAttributes stemming;
+	
 	#endregion
 	
 	#region Properties
@@ -68,15 +111,11 @@ public class Plant : MonoBehaviour {
 	void Start()
 	{
 		//setup camera
-		mainCam = Camera.main;
 		depth = transform.position.z;
-		initialOneUnit = mainCam.WorldToScreenPoint(new Vector3(1, 0, depth)).x - mainCam.WorldToScreenPoint(new Vector3(0, 0, depth)).x;
-		Debug.Log("depth: " + depth);
-		screenHeight = CameraManager.Instance.Height;
-		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], veryHealthyColor, normalMaterial, lineWidth, LineType.Continuous, Joins.Weld);
-//		line.vectorObject.transform.position = transform.position;
-		glowAlphaColor = new Color(veryHealthyColor.r, veryHealthyColor.g, veryHealthyColor.b, 0);
-		glowLine = new VectorLine ("PlantGlow", new Vector3[MAX_POINTS - 2], glowAlphaColor, glowMaterial, lineWidth * glowLineWidthScaler, LineType.Continuous, Joins.Weld);
+		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], appearance.veryHealthyColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
+		line.depth = 1;
+		glowAlphaColor = new Color(appearance.veryHealthyColor.r, appearance.veryHealthyColor.g, appearance.veryHealthyColor.b, 0);
+		glowLine = new VectorLine ("PlantGlow", new Vector3[MAX_POINTS - 2], glowAlphaColor, appearance.glowMaterial, appearance.minWidth * appearance.glowLineWidthScaler, LineType.Continuous, Joins.Weld);
 		glowLine.active = true;
 		controlLine1 = new VectorLine ("Control Line 1", new Vector3[2], Color.red, null, 1f);
 		controlLine2 = new VectorLine ("Control Line 2", new Vector3[2], Color.red, null, 1f);
@@ -89,47 +128,53 @@ public class Plant : MonoBehaviour {
 		finishPoint.z = depth;
 
 		//End Cap
-		VectorLine.SetEndCap ("Point", EndCap.Back, normalMaterial, frontCapTexture);
+		VectorLine.SetEndCap ("Point", EndCap.Back, appearance.normalMaterial, appearance.frontCapTexture);
 		line.endCap = "Point";
 		line.drawStart = 0;
 		line.drawEnd = endSegment;
-		UpdateWidth();
 		line.smoothWidth = true;
+		UpdateWidth();
 		
 		splineSide = (Random.Range(0, 2) == 0);
 
-		//DrawPlant ();
 		AddCurve();
 		lowPoint = line.points3[0];
-		highPoint = line.points3[1];
+		highPoint = line.points3[2];
 		glowLine.Draw3D();
 		line.Draw3D();
-		points = new VectorPoints("Points", new Vector3[]{lowPoint, highPoint}, dotMaterial, 2.0f);
-		//points.Draw();
 		
-		witheredThreshold = OPTIMUM_SATURATION - aliveRange/2;
-		witheringThreshold = OPTIMUM_SATURATION - healthyRange/2;
-		healthyDryThreshold = OPTIMUM_SATURATION - veryHealthyRange/2;
-		healthyWetThreshold = OPTIMUM_SATURATION + veryHealthyRange/2;
-		drowningThreshold = OPTIMUM_SATURATION + healthyRange/2;
-		drownedThreshold = OPTIMUM_SATURATION + aliveRange/2;
+		//appearance
+		stateTransitionSeconds = appearance.stateTransitionSeconds;
+		
+		witheredThreshold = OPTIMUM_SATURATION - growth.aliveRange/2;
+		witheringThreshold = OPTIMUM_SATURATION - growth.healthyRange/2;
+		healthyDryThreshold = OPTIMUM_SATURATION - growth.veryHealthyRange/2;
+		healthyWetThreshold = OPTIMUM_SATURATION + growth.veryHealthyRange/2;
+		drowningThreshold = OPTIMUM_SATURATION + growth.healthyRange/2;
+		drownedThreshold = OPTIMUM_SATURATION + growth.aliveRange/2;
+		
+		//stemming
+		stemSide = (Random.Range(0, 2) == 0);
+		stemHeight = stemming.startingPlantHeight;
+		stems = new List<Stem>();
+		stemSegmentsPer = stemming.segmentsPer;
+		targetColor = appearance.veryHealthyColor;
+		stemParent = new GameObject();
+		stemParent.name = "stemParent";
 	}
 
 	void Update()
 	{
+		float deltaTime = Time.deltaTime;
 		if (state != PlantState.Dead)
 		{
-			growth += Time.deltaTime * maxGrowthPerSecond * growthFactor;
-			int intPart = Mathf.FloorToInt(growth);
-			float decPart = growth % 1;
+			height += deltaTime * growth.maxGrowthPerSecond * growthFactor;
+//			Debug.Log ("growth: " + growth);
+			int intPart = Mathf.FloorToInt(height);
+			float decPart = height % 1;
 	
 			if (intPart >= endSegment) {
-				//Debug.Log("growth: " + growth + ". intPart: " + intPart + ". decPart: " + decPart);
-	//			if (decPart < SKIP_TO_DEC)
-	//			{
-	//				decPart = SKIP_TO_DEC;
-	//				growth = intPart + decPart;
-	//			}
+			
 				if (intPart == lastSegment)
 				{
 					AddCurve();
@@ -147,47 +192,79 @@ public class Plant : MonoBehaviour {
 				//Debug.Log ("lowPoint: " + lowPoint);
 				//Debug.Log ("highPoint: " + highPoint);
 			}
+			
+			if (state == PlantState.Withering || state == PlantState.Withering)
+			{
+				unhealthyTimer += deltaTime;
+				if (unhealthyTimer > stemDeathTime)
+				{
+					KillStem();
+				}
+			}
+			
+			
 			UpdateWidth();
-//			AutoZoomOut();
+			UpdateStems();
 			line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
 	
 			UpdateSaturation();
 		}
 
-		
-			
 		if (transitioning)
 		{
-			transitionTimer += Time.deltaTime;
-			float t;
+			transitionTimer += deltaTime;
 			if (transitionTimer < stateTransitionSeconds)
 			{
-				t = transitionTimer/stateTransitionSeconds;
-				line.SetColor(Color.Lerp(previousColor, targetColor, t));
+				float t = transitionTimer/stateTransitionSeconds;
+				Color newColor = Color.Lerp(previousColor, targetColor, t);
+				line.SetColor(newColor);
+				SetStemColor(newColor);
 			}
 			else
 			{
 				line.SetColor(targetColor);
+				SetStemColor(targetColor);
 				transitioning = false;
 			}
 		}
 		if (glowTransitioning)
 		{
-			glowTransitionTimer += Time.deltaTime;
-			float t;
+			glowTransitionTimer += deltaTime;
 			if (glowTransitionTimer < stateTransitionSeconds)
 			{
-				t = glowTransitionTimer/stateTransitionSeconds;
+				float t = glowTransitionTimer/stateTransitionSeconds;
 				glowLine.SetColor(Color.Lerp(previousGlowColor, targetGlowColor, t));
 			}
 			else
 			{
 				glowLine.SetColor(targetGlowColor);
 				glowTransitioning = false;
-				if (glowLine.color != veryHealthyColor)
+				if (glowLine.color != appearance.veryHealthyColor)
 					glowLine.active = false;
 			}
 		}
+		
+		if (stemDying)
+		{
+			stemDyingTimer += deltaTime;
+			if (stemDyingTimer < stateTransitionSeconds)
+			{
+				float t = stemDyingTimer/stateTransitionSeconds;
+				stems[dyingStemIndex].SetColor(Color.Lerp(targetColor, appearance.deadColor, t));
+			}
+			else
+			{
+				float fallingTime = stemDyingTimer - stateTransitionSeconds;
+				float velocity = stemming.fallingGravity * fallingTime;
+				dyingStemTransform.Translate(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
+//				dyingStemTransform.Rotate(Vector3.forward, stemRotation * deltaTime);
+				if (stems[dyingStemIndex].line.vectorObject.transform.position.y < STEM_REMOVE_HEIGHT)
+				{
+					RemoveStem();
+				}
+			}
+		}
+		
 		glowLine.Draw3D();
 		line.Draw3D();
 	}
@@ -232,26 +309,25 @@ public class Plant : MonoBehaviour {
 	}
 	*/
 	#endregion
-	public void Water()
-	{
-		saturation += Time.deltaTime * waterPerSecond;
-	}
 	
 	#region Actions
-	
+	public void Water()
+	{
+		saturation += Time.deltaTime * growth.waterPerSecond;
+	}
 	#endregion
 
 	#region Private
 	private const int MAX_POINTS = 16384;
 	private const float DROP_BACK_PERCENT = .95f;
+	private float HEIGHT_MULTIPLIER = 10f;
 	private float growthFactor = 1f;
 	
 	private VectorLine line;
 	private VectorLine glowLine;
 	
 	private Vector3 startPoint;
-	private float screenHeight;
-	private float growth = 0;
+	private float height = 0;
 	private int endSegment = 1;
 	private int lastSegment = 0;
 	private Vector3 finishPoint;
@@ -259,9 +335,7 @@ public class Plant : MonoBehaviour {
 	private bool lastControlPointFlipped;
 	private bool splineSide;
 	private bool glow;
-	private Camera mainCam;
 	private float depth;
-	private float initialOneUnit;
 	private float[] widths;
 	
 	private Vector3 lowPoint;
@@ -274,7 +348,6 @@ public class Plant : MonoBehaviour {
 	private float controlLength2;
 	private Vector3[] curvePoints;
 	
-	VectorPoints points;
 	private const float OPTIMUM_SATURATION = .5f;
 	private float saturation = OPTIMUM_SATURATION;
 	private float healthyWetThreshold;
@@ -300,9 +373,30 @@ public class Plant : MonoBehaviour {
 	private float glowTransitionTimer;
 	private Color glowAlphaColor;
 	
+	//stemming
+	private float STEM_DEPTH = -.1f;
+	private float STEM_REMOVE_HEIGHT = -20;
+	private bool stemSide;
+	private int stemHeight;
+	private List<Stem> stems;
+	private int stemSegmentsPer;
+	private int stemWidthGrowth;
+	private float stemDeathTime;
+	private float unhealthyTimer;
+	private bool stemDying;
+	private int dyingStemIndex;
+	private float stemDyingTimer;
+	private float stemXMovement;
+	public float stemRotation;
+	private Transform dyingStemTransform;
+	private GameObject stemParent;
+	
+	//appearanec
+	private float stateTransitionSeconds;
+	
 	private void Restart()
 	{
-		growth = 0;
+		height = 0;
 		endSegment = 1;
 		line.drawEnd = 1;
 		lastSegment = 0;
@@ -312,6 +406,10 @@ public class Plant : MonoBehaviour {
 		AddCurve();
 		lowPoint = line.points3[0];
 		highPoint = line.points3[1];
+		stemSide = (Random.Range(0, 2) == 0);
+		stemHeight = stemming.startingPlantHeight;
+		stems = new List<Stem>();
+		targetColor = appearance.veryHealthyColor;
 	}
 
 	private void AddCurve()
@@ -327,21 +425,21 @@ public class Plant : MonoBehaviour {
 		startPoint = finishPoint;
 		Vector3[] splinePoints = new Vector3[3];;
 		splinePoints[0] = startPoint;
-		float splineCurveHeight = Random.Range(minSplineHeight, maxSplineHeight);
-		float upperYCoord = splineCurveHeight * screenHeight + startPoint.y;
+		float splineCurveHeight = Random.Range(spline.minHeight, spline.maxHeight);
+		float upperYCoord = splineCurveHeight * HEIGHT_MULTIPLIER + startPoint.y;
 		splineSide = !splineSide;
-		splinePoints[1] = new Vector3(startPoint.x + Random.Range(minSplineOffset, maxSplineOffset) * screenHeight * (splineSide ? 1 : -1), 
-		                              Random.Range(startPoint.y + minSplineYSeperation * splineCurveHeight * screenHeight, upperYCoord - minSplineYSeperation * splineCurveHeight * screenHeight));
+		splinePoints[1] = new Vector3(startPoint.x + Random.Range(spline.minOffset, spline.maxOffset) * HEIGHT_MULTIPLIER * (splineSide ? 1 : -1), 
+		                              Random.Range(startPoint.y + spline.minYSeperation * splineCurveHeight * HEIGHT_MULTIPLIER, upperYCoord - spline.minYSeperation * splineCurveHeight * HEIGHT_MULTIPLIER));
 		finishPoint = new Vector3(startPoint.x, upperYCoord);
 		splinePoints[2] = finishPoint;
 		
 		if (drawDebugMarks)
 		{
-			VectorPoints points = new VectorPoints("Spline Marks", splinePoints, Color.red, dotMaterial, .5f);
+			VectorPoints points = new VectorPoints("Spline Marks", splinePoints, Color.red, appearance.dotMaterial, .5f);
 			points.Draw();
 		}
 		
-		int segments = Mathf.RoundToInt(segmentsPerScreen * splineCurveHeight);
+		int segments = Mathf.RoundToInt(growth.segmentsPerScreen * splineCurveHeight);
 		line.MakeSpline(splinePoints, segments, lastSegment);
 		lastSegment += segments;
 	}
@@ -353,9 +451,9 @@ public class Plant : MonoBehaviour {
 		float angle;
 		bool flipControlPoint;
 		if (lastSegment == 0) {
-			angle = Random.Range (minBezierAngle, maxBezierAngle);
+			angle = Random.Range (bezier.minAngle, bezier.maxAngle);
 			flipControlPoint = (Random.Range(0, 2) == 0);
-			controlLength = Random.Range (minBezierControlLength, maxBezierControlLength) * screenHeight;
+			controlLength = Random.Range (bezier.minControlLength, bezier.maxControlLength) * HEIGHT_MULTIPLIER;
 		} else {
 			controlLength = controlLength2;
 			angle = lastAngle;
@@ -370,20 +468,20 @@ public class Plant : MonoBehaviour {
 		curvePoints [1].x = startPoint.x + controlPointOffset.x * (flipControlPoint ? 1 : -1);
 		curvePoints [1].y = startPoint.y + controlPointOffset.y;
 		curvePoints[1].z = depth;
-		float bezierCurveHeight =  Random.Range(minBezierCurveHeight, maxBezierCurveHeight);
-		finishPoint = new Vector3(startPoint.x, startPoint.y + bezierCurveHeight * screenHeight, depth);
+		float bezierCurveHeight =  Random.Range(bezier.minCurveHeight, bezier.maxCurveHeight);
+		finishPoint = new Vector3(startPoint.x, startPoint.y + bezierCurveHeight * HEIGHT_MULTIPLIER, depth);
 		curvePoints[2] = finishPoint;
-		angle = Random.Range (minBezierAngle, maxBezierAngle);
+		angle = Random.Range (bezier.minAngle, bezier.maxAngle);
 		lastAngle = angle;
 //		Debug.Log ("angle 2: " + angle);
-		controlLength2 = Random.Range (minBezierControlLength, maxBezierControlLength) * screenHeight;
+		controlLength2 = Random.Range (bezier.minControlLength, bezier.maxControlLength) * HEIGHT_MULTIPLIER;
 //		Debug.Log ("controlLenght 2: " + controlLength / screenHeight);
 		controlPointOffset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad) * controlLength2, Mathf.Sin(angle * Mathf.Deg2Rad) * controlLength2, depth);
 //		Debug.Log ("controlPointOffset 2 : " + controlPointOffset);
 		curvePoints[3].x = finishPoint.x + controlPointOffset.x * (flipControlPoint ? 1 : -1);
 		curvePoints[3].y = finishPoint.y - controlPointOffset.y;
 		curvePoints[3].z = depth;
-		int segments = Mathf.RoundToInt(segmentsPerScreen * bezierCurveHeight);
+		int segments = Mathf.RoundToInt(growth.segmentsPerScreen * bezierCurveHeight);
 //		Debug.Log("segments: " + segments);
 		line.MakeCurve (curvePoints, segments, lastSegment);
 		glowLine.points3 = line.points3;
@@ -399,7 +497,7 @@ public class Plant : MonoBehaviour {
 		{
 			for(int i=lastSegment; i < lastSegment + segments; i++)
 			{
-				GameObject marker = Instantiate(pointMarker, line.points3[i], transform.rotation) as GameObject;
+				Instantiate(pointMarker, line.points3[i], transform.rotation);
 				//				marker.transform.position = Vector3.zero;
 			}
 		}
@@ -421,24 +519,26 @@ public class Plant : MonoBehaviour {
 			switch (state)
 			{
 			case PlantState.Dead:
-				targetColor = deadColor;
+				targetColor = appearance.deadColor;
 				growthFactor = 0;
 				break;
 			case PlantState.Drowning:
-				targetColor = drowningColor;
-				growthFactor = unHealthyGrowthFactor;
-				break;
+				ResetStemDeath();
+				targetColor = appearance.drowningColor;
+				growthFactor = growth.unHealthyGrowthFactor;
+				break; 
 			case PlantState.Withering:
-				targetColor = witheringColor;
-				growthFactor = unHealthyGrowthFactor;
+				ResetStemDeath();
+				targetColor = appearance.witheringColor;
+				growthFactor = growth.unHealthyGrowthFactor;
 				break;
 			case PlantState.HealthyDry:
 			case PlantState.HealthyWet:
-				targetColor = healthyColor;
-				growthFactor = healthyGrowthFactor;
+				targetColor = appearance.healthyColor;
+				growthFactor = growth.healthyGrowthFactor;
 				break;
 			case PlantState.VeryHealthy:
-				targetColor = veryHealthyColor;
+				targetColor = appearance.veryHealthyColor;
 				growthFactor = 1;
 				break;
 			}
@@ -449,6 +549,20 @@ public class Plant : MonoBehaviour {
 		}
 	}
 	
+	private void ResetStemDeath()
+	{
+		unhealthyTimer = 0;
+		stemDeathTime = Random.Range(stemming.minDeathTime, stemming.maxDeathTime);
+	}
+	
+	private void SetStemColor(Color color)
+	{
+		foreach(Stem stem in stems)
+		{
+			stem.SetColor(color);
+		}
+	}
+	
 	private void SetGlow(bool newGlow)
 	{
 		if (glow != newGlow)
@@ -456,7 +570,7 @@ public class Plant : MonoBehaviour {
 			glow = newGlow;
 			if (glow)
 			{
-				targetGlowColor = veryHealthyColor;
+				targetGlowColor = appearance.veryHealthyColor;
 				glowLine.active = true;
 			}
 			else
@@ -471,16 +585,13 @@ public class Plant : MonoBehaviour {
 	
 	private float GetWidth(int i)
 	{
-		return Mathf.Atan((float)i/widthGrowStretch) * maxWidth * 2/Mathf.PI + lineWidth;
+		return Mathf.Atan((float)i/appearance.widthGrowStretch) * appearance.maxWidth * 2/Mathf.PI + appearance.minWidth;
 	}
 	
 	private void UpdateWidth()
 	{
 		widths = new float[line.points3.Length - 1];
 		float[] glowWidths = new float[line.points3.Length - 1];
-		float oneUnit = mainCam.WorldToScreenPoint(new Vector3(1, 0, depth)).x - mainCam.WorldToScreenPoint(new Vector3(0, 0, depth)).x;
-//		float widthScaler = oneUnit/initialOneUnit;
-//		float widest = lineWidth + lineWidth * growth * widthGrowFactor;
 		
 		int max = line.drawEnd;
 		for(int i=0; i <= (float)max; i++)
@@ -489,13 +600,13 @@ public class Plant : MonoBehaviour {
 //			widths[i] = 5f;
 //			widths[i] = Mathf.Clamp(Mathf.Lerp(widest, lineWidth, (float)i/max), 0, maxWidth);
 			widths[max - i] = GetWidth(i);
-			glowWidths[i] = widths[i] * glowLineWidthScaler;
+			glowWidths[i] = widths[i] * appearance.glowLineWidthScaler;
 		}
 //		Debug.Log("maxWidth: " + widths[0]);
-		float glowLineWidth = lineWidth * glowLineWidthScaler;
+		float glowLineWidth = appearance.minWidth * appearance.glowLineWidthScaler;
 		for(int i=(int)max + 1; i< widths.Length; i++)
 		{
-			widths[i] = lineWidth;
+			widths[i] = appearance.minWidth;
 			glowWidths[i] = glowLineWidth;
 		}
 		line.SetWidths(widths);
@@ -504,7 +615,7 @@ public class Plant : MonoBehaviour {
 	
 	private void UpdateSaturation()
 	{
-		saturation -= dryPerSecond * Time.deltaTime;
+		saturation -= growth.dryPerSecond * Time.deltaTime;
 //		Debug.Log("saturation: " + saturation);
 		switch (state)
 		{
@@ -569,24 +680,87 @@ public class Plant : MonoBehaviour {
 		}
 	}
 	
-	private void AutoZoomOut()
+	private void UpdateStems()
 	{
-		float screenBottomEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, 0f, -depth)).y;
-		//		Debug.Log("screenBottomEdge: " + screenBottomEdge);
-		int drawEnd = line.drawEnd;
-		//		Debug.Log("line.points3[drawEnd - 1].y: " + line.points3[drawEnd - 1].y);
-		float greatestWidth = 0f;
-		for(int i=0; i < line.drawEnd; i++)
+		float newGrowth = Time.deltaTime * stemming.maxGrowthPerSecond * growthFactor;
+		
+		foreach(Stem stem in stems)
+		{	
+			stem.Grow(newGrowth, widths[stem.height]);
+			stem.line.Draw3D();
+		}
+		
+		if (height > stemHeight)
 		{
-			if(line.points3[i].y >= screenBottomEdge)
+			NewStem();
+			stemHeight += Random.Range(stemming.minSeperation, stemming.maxSeperation);
+			stemSide = !stemSide;
+		}
+	}
+	
+	private void NewStem()
+	{
+		VectorLine stemLine = new VectorLine ("Stem", new Vector3[MAX_POINTS - 2], appearance.veryHealthyColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
+		stemLine.depth = 0;
+		stemLine.endCap = "Point";
+		stemLine.drawStart = 0;
+		//		line.drawEnd = 0;
+		stemLine.drawEnd = 1;
+		line.smoothWidth = true;
+		stemLine.lineWidth = 1f;//temp
+		Vector3[] curve = new Vector3[4];
+		Vector3 point = line.points3[stemHeight];
+		curve[0] = point;
+		curve[2] = point + new Vector3(Random.Range(stemming.minCurveWidth, stemming.maxCurveWidth) * (stemSide ? 1: -1), Random.Range(stemming.minCurveHeight, stemming.maxCurveHeight));
+		float angle1 = Random.Range(stemming.minControlAngle1, stemming.maxControlAngle1) *  Mathf.Deg2Rad;
+		float angle2 = Random.Range(stemming.minControlAngle2, stemming.maxControlAngle2) *  Mathf.Deg2Rad;
+		float controlLength = Random.Range(stemming.minControlLength, stemming.maxControlLength);
+		curve[1] = point + new Vector3(Mathf.Sin(angle1) * controlLength * (stemSide ? 1: -1), Mathf.Cos(angle1) * controlLength);
+		curve[3] = curve[2] + new Vector3(Mathf.Sin(angle2) * controlLength * (stemSide ? 1: -1), Mathf.Cos(angle2) * controlLength);
+		stemLine.MakeCurve (curve, stemming.segmentsPer, 0);
+		Stem newStem = new Stem(stemLine, stemHeight, stemSegmentsPer, stemming.widthGrowth, appearance.minWidth, targetColor, stemSide);
+		stems.Add(newStem);
+		
+		if (drawPoints)
+		{
+			for(int i=0; i < stemLine.points3.Length; i++)
 			{
-				greatestWidth = widths[i];
-				break;
+				Debug.Log ("i");
+				Instantiate(pointMarker, stemLine.points3[i], transform.rotation);
+				//				marker.transform.position = Vector3.zero;
 			}
 		}
-		Debug.Log("greatestWidth: " + greatestWidth);
-		if (greatestWidth > maxDisplayableWidth)
-			cam.ZoomOut();
+		
+		if (drawDebugMarks)
+		{
+			controlLine1.points3 = new Vector3[] {point, new Vector3(curve[1].x, curve[1].y, depth)};
+			controlLine2.points3 = new Vector3[] {curve[2], new Vector3(curve[3].x, curve[3].y, depth)};
+			controlLine1.Draw3D();
+			controlLine2.Draw3D();
+		}
+	}
+	
+	private void KillStem()
+	{
+		int numOfStems = stems.Count;
+		if (!stemDying && numOfStems > 0)
+		{
+			stemDying = true;
+			stemDyingTimer = 0;
+			dyingStemIndex = Random.Range(0, numOfStems);
+			Debug.Log("stem " + dyingStemIndex + "is dying");
+			stemXMovement = stemming.fallingHorizontalMovement * (stems[dyingStemIndex].leftSide ? -1 : 1);
+			stemRotation = stemming.fallingRotation * (stems[dyingStemIndex].leftSide ? -1 : 1);
+			dyingStemTransform = stems[dyingStemIndex].line.vectorObject.transform;
+		}
+		unhealthyTimer = 0;
+	}
+	
+	private void RemoveStem()
+	{
+		stemDying = false;
+		VectorLine.Destroy(ref stems[dyingStemIndex].line);
+		stems.RemoveAt(dyingStemIndex);
 	}
 	#endregion
 }

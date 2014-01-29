@@ -20,12 +20,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	[Range(0, 50)]public float maxFOV = 120f; 
 	#endregion
 
-	#region Properties
-	public float Height
-	{
-		get {return height; }
-	}
-	
+	#region Properties	
 	public float Width
 	{
 		get {return width; }
@@ -44,7 +39,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 //		vectorCam.fieldOfView = mainCam.fieldOfView;
 		vectorCam.nearClipPlane = 1;
 		vectorCam.farClipPlane = 1000;
-		height = 10;
 		width = Screen.width;
 		plantDistanceFromCam = plant.transform.position.z - transform.position.z;
 		Debug.Log("plantDistanceFromCam: " + plantDistanceFromCam);
@@ -56,7 +50,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	}
 
 	void Update () {
-		//float distanceFromEdge = topEdge - plant.Height;
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
 		float plantY = plant.TopPosisiton.y;
 		bool overScrollEdge = plantY > scrollEdge;
@@ -152,7 +145,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private float width;
 	private Camera vectorCam;
 	private Camera mainCam;
-	private float topEdge;
 	private float scrollEdge;
 	private float plantDistanceFromCam;
 	private Vector2 prevCoords;
@@ -181,7 +173,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		} else {
 			if (prevCoordsSet)
 			{
-				Vector2 deltaCoords = prevCoords - coordinates;
 				Vector3 initialPos = mainCam.ScreenToWorldPoint(new Vector3(prevCoords.x, prevCoords.y, plantDistanceFromCam));
 //				Debug.Log("initialPos: " + initialPos);
 				Vector3 newPos = mainCam.ScreenToWorldPoint(new Vector3(coordinates.x, coordinates.y, plantDistanceFromCam)); 
@@ -206,13 +197,13 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		Vector3 newCoords = mainCam.WorldToScreenPoint(initialPos);
 		mainCam.fieldOfView -= delta;
 		Vector3 newPosOriginalFOV = mainCam.ScreenToWorldPoint(new Vector3(newCoords.x, newCoords.y, plantDistanceFromCam));
-		Debug.Log("newCoords: " + newCoords);
-		Vector3 coordsDelta = (Vector2)newCoords - coordinates;
-		Vector3 posDelta = initialPos - newPosOriginalFOV;
+//		Debug.Log("newCoords: " + newCoords);
+//		Vector3 coordsDelta = (Vector2)newCoords - coordinates;
+//		Vector3 posDelta = initialPos - newPosOriginalFOV;
 		MoveCamera(newPosOriginalFOV - initialPos);
 		mainCam.fieldOfView += delta;
-		Debug.Log("coordsDelta: " + coordsDelta);
-		Debug.Log("posDelta: " + posDelta);
+//		Debug.Log("coordsDelta: " + coordsDelta);
+//		Debug.Log("posDelta: " + posDelta);
 		CalculateEdges();
 	}
 	
@@ -237,7 +228,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	void CalculateEdges()
 	{
 		scrollEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, scrollEdgePercent, plantDistanceFromCam)).y;
-		topEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, 1, plantDistanceFromCam)).y;
 	}
 	#endregion
 }
