@@ -84,7 +84,6 @@ public class Plant : MonoBehaviour {
 		public float maxDeathTime = 100000f;
 		public float fallingGravity = .05f;
 		public float fallingHorizontalMovement = -2f;
-		public float fallingRotation = -2f;
 	}
 	
 	public AppearanceAttributes appearance;
@@ -374,7 +373,6 @@ public class Plant : MonoBehaviour {
 	private Color glowAlphaColor;
 	
 	//stemming
-	private float STEM_DEPTH = -.1f;
 	private float STEM_REMOVE_HEIGHT = -20;
 	private bool stemSide;
 	private int stemHeight;
@@ -387,7 +385,6 @@ public class Plant : MonoBehaviour {
 	private int dyingStemIndex;
 	private float stemDyingTimer;
 	private float stemXMovement;
-	public float stemRotation;
 	private Transform dyingStemTransform;
 	private GameObject stemParent;
 	
@@ -750,7 +747,6 @@ public class Plant : MonoBehaviour {
 			dyingStemIndex = Random.Range(0, numOfStems);
 			Debug.Log("stem " + dyingStemIndex + "is dying");
 			stemXMovement = stemming.fallingHorizontalMovement * (stems[dyingStemIndex].leftSide ? -1 : 1);
-			stemRotation = stemming.fallingRotation * (stems[dyingStemIndex].leftSide ? -1 : 1);
 			dyingStemTransform = stems[dyingStemIndex].line.vectorObject.transform;
 		}
 		unhealthyTimer = 0;
