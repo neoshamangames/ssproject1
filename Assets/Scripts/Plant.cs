@@ -8,9 +8,18 @@ public class Plant : MonoBehaviour {
 	#region Attributes
 	public Transform pointMarker;
 	public CameraManager cam;
+	public GameObject flowerPrefab;
 	public bool drawDebugMarks;
 	public bool drawPoints;
 	public bool bezierCurves;
+	public bool useDebugSettings;
+	
+	[System.Serializable]
+	public class Settings
+	{
+		public GrowthAttributes growth;
+		public StemmingAttributes stemming;
+	}
 	
 	[System.Serializable]
 	public class AppearanceAttributes {
@@ -66,6 +75,7 @@ public class Plant : MonoBehaviour {
 	public class StemmingAttributes {
 		[Range(5, 100)]public int segmentsPer = 15;
 		[Range(0, 50)] public float maxGrowthPerSecond = .05f;
+		[Range(1, 10)]public float maxWidth = 1f;
 		[Range(0, 50)] public float widthGrowth = .05f;
 		[Range(0, 1000)]public int startingPlantHeight = 250;
 		[Range(0, 1000)]public int minSeperation = 50;
@@ -80,17 +90,24 @@ public class Plant : MonoBehaviour {
 		[Range(0, 90)] public float maxControlAngle2 = 90f;
 		[Range(0, 50)] public float minControlLength = 10f;
 		[Range(0, 50)] public float maxControlLength = 10f;
+		[Range(0, 2)]public float minFlowerSize = 0f;
+		[Range(0, 2)]public float maxFlowerSize = .75f;
+		[Range(0, 1)]public float flowerGrowthFactor = 1f;
+		public float buddingTime = 1f;
+		public float harvestingTime = 1f;
+		public float flowerDelay;
+		public float newFlowerDelay;
 		public float minDeathTime = 10000f;
 		public float maxDeathTime = 100000f;
 		public float fallingGravity = .05f;
 		public float fallingHorizontalMovement = -2f;
 	}
 	
+	public Settings debugSettings;
+	public Settings releaseSettings;
 	public AppearanceAttributes appearance;
-	public GrowthAttributes growth;
 	public BezierCurveAttributes bezier;
 	public SplineAttributes spline;
-	public StemmingAttributes stemming;
 	
 	#endregion
 	
@@ -102,13 +119,25 @@ public class Plant : MonoBehaviour {
 	
 	public Vector3 BasePosisiton
 	{
-		get { return line.points3[0] + transform.position; }
+		get { return line.points3[0]; }
 	}
 	#endregion
 
 	#region Unity
 	void Start()
 	{
+		//settings
+		if (useDebugSettings)
+		{
+			growth = debugSettings.growth;
+			stemming = debugSettings.stemming;
+		}
+		else
+		{
+			growth = releaseSettings.growth;
+			stemming = releaseSettings.stemming;
+		}
+	
 		//setup camera
 		depth = transform.position.z;
 		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], appearance.veryHealthyColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
@@ -254,8 +283,9 @@ public class Plant : MonoBehaviour {
 			else
 			{
 				float fallingTime = stemDyingTimer - stateTransitionSeconds;
-				float velocity = stemming.fallingGravity * fallingTime;
-				dyingStemTransform.Translate(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
+				//dyingStemTransform.Translate(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
+				Vector3 translate = new Vector3(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
+				dyingStemTransform.localPosition += translate;
 //				dyingStemTransform.Rotate(Vector3.forward, stemRotation * deltaTime);
 				if (stems[dyingStemIndex].line.vectorObject.transform.position.y < STEM_REMOVE_HEIGHT)
 				{
@@ -316,11 +346,14 @@ public class Plant : MonoBehaviour {
 	}
 	#endregion
 
-	#region Private
+	#region Private	
 	private const int MAX_POINTS = 16384;
 	private const float DROP_BACK_PERCENT = .95f;
 	private float HEIGHT_MULTIPLIER = 10f;
 	private float growthFactor = 1f;
+	
+	private GrowthAttributes growth;
+	private StemmingAttributes stemming;
 	
 	private VectorLine line;
 	private VectorLine glowLine;
@@ -715,7 +748,9 @@ public class Plant : MonoBehaviour {
 		curve[1] = point + new Vector3(Mathf.Sin(angle1) * controlLength * (stemSide ? 1: -1), Mathf.Cos(angle1) * controlLength);
 		curve[3] = curve[2] + new Vector3(Mathf.Sin(angle2) * controlLength * (stemSide ? 1: -1), Mathf.Cos(angle2) * controlLength);
 		stemLine.MakeCurve (curve, stemming.segmentsPer, 0);
-		Stem newStem = new Stem(stemLine, stemHeight, stemSegmentsPer, stemming.widthGrowth, appearance.minWidth, targetColor, stemSide);
+		GameObject flower = Instantiate(flowerPrefab) as GameObject;
+		//Debug.Log ("instantiating new flower: " + flower);
+		Stem newStem = new Stem(stemLine, stemHeight, stemSegmentsPer, stemming, appearance.minWidth, targetColor, stemSide, flower.GetComponent<Flower>());
 		stems.Add(newStem);
 		
 		if (drawPoints)

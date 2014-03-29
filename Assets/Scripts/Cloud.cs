@@ -26,20 +26,28 @@ public class Cloud : MonoBehaviour {
 	[Range(0, 1)]public float raindropLengthVariety = .01f;
 	[Range(0, 500)]public float raindropSpeed = 10f;
 	[Range(0, 2)]public float startSize = 1f;
+	public Vector3 cloudOffset;
 	#endregion
 
 	#region Unity
 	void Awake()
 	{
+		cloudCam = CloudCamera.Instance.camera;
+		mainCam = Camera.main;
 		transform.localScale = new Vector3(startSize, startSize, 1);
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
 		raindropTimers = new List<float>();
 		raindropLengths = new List<float>();
+		float distanceFromCam = transform.position.z - cloudCam.transform.position.z;
+		screenHeight = cloudCam.ViewportToWorldPoint(new Vector3(0, 1, distanceFromCam)).y - cloudCam.ViewportToWorldPoint(new Vector3(0, 0, distanceFromCam)).y;
+		Debug.Log("screenHeight: " + screenHeight);
 	}
 	
 	void Update()
 	{
+		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton + cloudOffset);
+		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos);
 		currentScale = transform.localScale;
 		cloudPercentage = currentScale.x/maxSize;
 		float cloudGrey = Mathf.Lerp(1, darkestGrey, cloudPercentage);
@@ -73,6 +81,10 @@ public class Cloud : MonoBehaviour {
 	#endregion
 	
 	#region Private
+	private Camera cloudCam;
+	private Camera mainCam;
+	private float screenHeight;
+	private Vector3 cloudScreenPos;
 	private const int MAX_RAIN_DROPS = 500;
 	private Vector3 currentScale;
 	private bool raining;
@@ -138,12 +150,13 @@ public class Cloud : MonoBehaviour {
 	private void SpawnRainDrop()
 	{
 		float width = Mathf.Lerp(raindropAreaMinWidth, raindropAreaMaxWidth, cloudPercentage);
-		float xCoor = Random.Range(-width, width);
-		float yCoor = Random.Range(raindropBottomEdge, raindropTopEdge);
+		float xCoor = Random.Range(transform.position.x - width, transform.position.x + width);
+//		float yCoor = Random.Range(raindropBottomEdge, raindropTopEdge);
+		float yCoor = Random.Range(transform.position.y - screenHeight, transform.position.y);
 		float length = Mathf.Lerp(minRaindropLength, maxRaindropLength, cloudPercentage)
 			* (1 + Random.Range(-raindropLengthVariety, raindropLengthVariety));
 		Vector2 startPoint = new Vector2(xCoor, yCoor);
-			   Vector2 endPoint = new Vector2(xCoor, yCoor);
+		Vector2 endPoint = new Vector2(xCoor, yCoor);
 		Vector2[] points = {startPoint, (startPoint + endPoint)/2, endPoint};
 		VectorLine drop = new VectorLine("Rainddrop", points, raindropMaterial, bottomRaindropThickness, LineType.Continuous);
 		drop.smoothWidth = true;

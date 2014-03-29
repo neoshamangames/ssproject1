@@ -6,13 +6,12 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 
 	#region Attributes
 	public Camera cloudCam;
-	public Camera plantCam;
 	public Plant plant;
 	public Cloud cloud;
 	public float scrollEdgePercent = .75f;
 	public float panSensitivity = 1f;
-	public float maxXScroll = 0f;
-	public float yScrollBuffer = 2f;
+	public float xScrollBuffer = .1f;
+	public float yScrollBuffer = .1f;
 	[Range(0, 50)]public float backgroundMovementFactor = 1f;
 	[Range(0, 50)]public float mouseZoomSensitivity = 2f;
 	[Range(0, 50)]public float pinchZoomSensitivity = 2f;
@@ -156,8 +155,18 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	private void ProcessTouchBegan(Vector2 coordinates)
 	{
-		Ray ray = cloudCam.ScreenPointToRay(coordinates);
-		touchBeganOnCloud = Physics.Raycast(ray);
+		Ray cloudRay = cloudCam.ScreenPointToRay(coordinates);
+		Ray mainRay = mainCam.ScreenPointToRay(coordinates);
+		RaycastHit hit;
+		
+		touchBeganOnCloud = (Physics.Raycast(cloudRay));
+			
+		if (Physics.Raycast(mainRay, out hit))
+		{
+			Collider collider = hit.collider;
+			if (collider != null && collider.tag == "Flower")
+				collider.gameObject.GetComponent<Flower>().ProcessClick();
+		}
 	}
 	
 	private void ProcessTouch(Vector2 coordinates)
@@ -211,17 +220,13 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	{
 //		Debug.Log("Move cam: " + movement);
 		mainCam.transform.position += movement;
-		Vector3 pos = mainCam.transform.position;
-		if (pos.x > maxXScroll)
-			pos.x = maxXScroll;
-		if (pos.x < -maxXScroll)
-			pos.x = -maxXScroll;
-		if (pos.y < plant.BasePosisiton.y)
-			pos.y = plant.BasePosisiton.y;
-		float maxYScroll = plant.TopPosisiton.y + yScrollBuffer;
-		if (pos.y > maxYScroll)
-			pos.y = maxYScroll;
-		mainCam.transform.position = pos;
+		Vector3 basePos = mainCam.WorldToViewportPoint(plant.BasePosisiton);
+		Vector3 topPos = mainCam.WorldToViewportPoint(plant.TopPosisiton);
+		if (topPos.y < yScrollBuffer ||  basePos.y > (1 - yScrollBuffer) || basePos.x  < xScrollBuffer || basePos.x > (1 - xScrollBuffer))
+		{
+			mainCam.transform.position -= movement;
+			return;
+		}
 		CalculateEdges();
 	}
 	

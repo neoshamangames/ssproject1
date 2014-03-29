@@ -9,30 +9,39 @@ public class Stem : Object {
 	public float growth = 0;
 	public int height;
 	public bool leftSide;
+	public Flower flower;
+	public Transform flowerParent;
+	public Plant.StemmingAttributes stemming;
 	#endregion
 	
 	#region Constructors
-	public Stem(VectorLine line_, int height, int segments, float widthGrowth, float lineWidth, Color color, bool leftSide)
+	public Stem(VectorLine line, int height, int segments, Plant.StemmingAttributes stemming, float lineWidth, Color color, bool leftSide, Flower flower)
 	{
-		line = line_;
+		this.line = line;
 		lowPoint = line.points3[0];
 		highPoint = line.points3[1];
 		this.height = height;
 		this.segments = segments;
-		this.widthGrowth = widthGrowth;
+		this.stemming = stemming;
 		maxWidth = this.lineWidth = lineWidth;
 		this.leftSide = leftSide;
+		float angle = Vector3.Angle(highPoint - lowPoint, Vector3.up);
+		flower.transform.localEulerAngles = new Vector3(0, 0, angle);
+		flower.transform.position = line.points3[0];
+		flower.transform.localScale *= stemming.minFlowerSize;
+		flower.transform.parent = line.vectorObject.transform;
+		flower.stemming = stemming;
+		this.flower = flower;
 		SetColor(color);
 	}
 	#endregion
 	
-	#region Actions
+	#region Actions	
 	public void Grow(float newGrowth, float currentWidth)
-	{
+	{	
 		if (growth < segments-1)
 		{
 			growth += newGrowth;
-	//		Debug.Log("growth: " + growth);
 			
 			int intPart = Mathf.FloorToInt(growth);
 			float decPart = growth % 1;
@@ -48,13 +57,20 @@ public class Stem : Object {
 	//			Debug.Log("endSegment: " + endSegment);
 			}
 			//Debug.Log("stem.line.drawEnd: " + stem.line.drawEnd);
-			//Debug.Log("intPart: " + intPart);
 			line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
+			flower.transform.position = line.points3[intPart + 1];
+			Vector3 direction = line.points3[intPart + 1] - line.points3[intPart];
+			float angle = Vector3.Angle(direction, Vector3.up);
+			float sign = Mathf.Sign(Vector3.Dot(direction, Vector3.right));
+			angle *= sign;
+			flower.transform.localEulerAngles = new Vector3(0, 0, -angle);
 		}
-		maxWidth = Mathf.Clamp(maxWidth + widthGrowth, 0, currentWidth);
-//		Debug.Log("maxWidth: " + maxWidth);
+		maxWidth = Mathf.Clamp(Mathf.Clamp(maxWidth + stemming.widthGrowth, 0, currentWidth), 0, stemming.maxWidth);
 		UpdateWidth();
+		flower.Grow(newGrowth);
 	}
+	
+	
 	
 	public void SetColor(Color color)
 	{
@@ -62,8 +78,8 @@ public class Stem : Object {
 	}
 	#endregion
 	
-	#region Private
-	private float DROP_BACK_PERCENT = .95f;
+	#region Private	
+	private float DROP_BACK_PERCENT = .99f;
 	private int endSegment = 1;
 	private Vector3 lowPoint;
 	private Vector3 highPoint;
