@@ -9,8 +9,12 @@ public class Cloud : MonoBehaviour {
 	public Material raindropMaterial;
 	public Transform raindropRoot;
 	public Plant plant;
-	[Range(0, 1)]public float growthRate;
-	[Range(0, 1)]public float depletionRate;
+	public bool useDebugRefillTime;
+	[Range(1, 200000)]public float debugRefillTime = 10f;
+	[Range(1, 200000)]public float releaseRefillTime = 10f;//43200 (12 hours)
+	[Range(1, 60)]public float depletionTime;
+	[Range(0, 2)]public float startSize = 1f;
+	[Range(0, 5)]public float minSize = .25f;
 	[Range(0, 5)]public float maxSize = 2f;
 	[Range(0, 1)]public float darkestGrey = .25f;
 	[Range(0, 100)]public float dropsPerFrameMax = .05f;
@@ -25,21 +29,31 @@ public class Cloud : MonoBehaviour {
 	[Range(0, 500)]public float maxRaindropLength = 1f;
 	[Range(0, 1)]public float raindropLengthVariety = .01f;
 	[Range(0, 500)]public float raindropSpeed = 10f;
-	[Range(0, 2)]public float startSize = 1f;
+	public Vector3 cloudOffset;
 	#endregion
 
 	#region Unity
 	void Awake()
 	{
+		cloudCam = CloudCamera.Instance.camera;
+		mainCam = Camera.main;
 		transform.localScale = new Vector3(startSize, startSize, 1);
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
 		raindropTimers = new List<float>();
 		raindropLengths = new List<float>();
+		float distanceFromCam = transform.position.z - cloudCam.transform.position.z;
+		screenHeight = cloudCam.ViewportToWorldPoint(new Vector3(0, 1, distanceFromCam)).y - cloudCam.ViewportToWorldPoint(new Vector3(0, 0, distanceFromCam)).y;
+		growthRate = (maxSize - minSize) / (useDebugRefillTime ? debugRefillTime : releaseRefillTime);
+		depletionRate = (maxSize - minSize) / depletionTime;
 	}
-	
+
 	void Update()
 	{
+		max = plant.TopPosisiton.y;
+		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton + cloudOffset);
+		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos);
+		prevYPos = cloudScreenPos.y;
 		currentScale = transform.localScale;
 		cloudPercentage = currentScale.x/maxSize;
 		float cloudGrey = Mathf.Lerp(1, darkestGrey, cloudPercentage);
@@ -62,17 +76,21 @@ public class Cloud : MonoBehaviour {
 	#region Actions
 	public void Rain(float deltaTime)
 	{
-		if (currentScale.x > 0)
+		if (currentScale.x > minSize)
 		{
 			raining = true;
 			float rain = -deltaTime * depletionRate;
 			ScaleCloud(rain);
-			plant.Water();
+			plant.Water(deltaTime / depletionTime);
 		}
 	}
 	#endregion
 	
 	#region Private
+	private Camera cloudCam;
+	private Camera mainCam;
+	private float screenHeight;
+	private Vector3 cloudScreenPos;
 	private const int MAX_RAIN_DROPS = 500;
 	private Vector3 currentScale;
 	private bool raining;
@@ -83,8 +101,9 @@ public class Cloud : MonoBehaviour {
 	private List<float> raindropLengths;
 	Touch firstTouch;
 	Touch secondTouch;
-	
-	
+	private float prevYPos;
+	private float max;
+	private float growthRate, depletionRate;
 	
 	private void ScaleCloud(float scale)
 	{
@@ -138,12 +157,13 @@ public class Cloud : MonoBehaviour {
 	private void SpawnRainDrop()
 	{
 		float width = Mathf.Lerp(raindropAreaMinWidth, raindropAreaMaxWidth, cloudPercentage);
-		float xCoor = Random.Range(-width, width);
-		float yCoor = Random.Range(raindropBottomEdge, raindropTopEdge);
+		float xCoor = Random.Range(transform.position.x - width, transform.position.x + width);
+//		float yCoor = Random.Range(raindropBottomEdge, raindropTopEdge);
+		float yCoor = Random.Range(transform.position.y - screenHeight, transform.position.y);
 		float length = Mathf.Lerp(minRaindropLength, maxRaindropLength, cloudPercentage)
 			* (1 + Random.Range(-raindropLengthVariety, raindropLengthVariety));
 		Vector2 startPoint = new Vector2(xCoor, yCoor);
-			   Vector2 endPoint = new Vector2(xCoor, yCoor);
+		Vector2 endPoint = new Vector2(xCoor, yCoor);
 		Vector2[] points = {startPoint, (startPoint + endPoint)/2, endPoint};
 		VectorLine drop = new VectorLine("Rainddrop", points, raindropMaterial, bottomRaindropThickness, LineType.Continuous);
 		drop.smoothWidth = true;

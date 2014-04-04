@@ -8,9 +8,18 @@ public class Plant : MonoBehaviour {
 	#region Attributes
 	public Transform pointMarker;
 	public CameraManager cam;
+	public GameObject flowerPrefab;
 	public bool drawDebugMarks;
 	public bool drawPoints;
 	public bool bezierCurves;
+	public bool useDebugSettings;
+	
+	[System.Serializable]
+	public class Settings
+	{
+		public GrowthAttributes growth;
+		public StemmingAttributes stemming;
+	}
 	
 	[System.Serializable]
 	public class AppearanceAttributes {
@@ -32,15 +41,15 @@ public class Plant : MonoBehaviour {
 	
 	[System.Serializable]
 	public class GrowthAttributes {
-		[Range(0, 50)] public float maxGrowthPerSecond = 1f;
+		[Range(0, 10)] public float maxGrowthPerSecond = 1f;
 		[Range(5, 1000)]public int segmentsPerScreen = 500;
 		[Range(0,1)]public float healthyGrowthFactor = .5f;
 		[Range(0,1)]public float unHealthyGrowthFactor = .25f;
 		[Range(0, 1)]public float veryHealthyRange = .05f;
 		[Range(0, 1)]public float healthyRange = .125f;
 		[Range(0, 1)]public float aliveRange = .35f;
-		public float waterPerSecond = .01f;
-		public float dryPerSecond = .001f;
+		[Range(0, 1)]public float waterPerCloud = .1f;
+		[Range(0, 1)]public float dryPerSecond = .001f;
 	}
 	
 	[System.Serializable]
@@ -66,6 +75,7 @@ public class Plant : MonoBehaviour {
 	public class StemmingAttributes {
 		[Range(5, 100)]public int segmentsPer = 15;
 		[Range(0, 50)] public float maxGrowthPerSecond = .05f;
+		[Range(1, 10)]public float maxWidth = 1f;
 		[Range(0, 50)] public float widthGrowth = .05f;
 		[Range(0, 1000)]public int startingPlantHeight = 250;
 		[Range(0, 1000)]public int minSeperation = 50;
@@ -80,18 +90,32 @@ public class Plant : MonoBehaviour {
 		[Range(0, 90)] public float maxControlAngle2 = 90f;
 		[Range(0, 50)] public float minControlLength = 10f;
 		[Range(0, 50)] public float maxControlLength = 10f;
+		[Range(0, 2)]public float minFlowerSize = 0f;
+		[Range(0, 2)]public float maxFlowerSize = .75f;
+		[Range(0, 1)]public float flowerGrowthFactor = 1f;
+		public float buddingTime = 1f;
+		public float harvestingTime = 1f;
+		public float flowerDelay;
+		public float newFlowerDelay;
 		public float minDeathTime = 10000f;
 		public float maxDeathTime = 100000f;
 		public float fallingGravity = .05f;
 		public float fallingHorizontalMovement = -2f;
+		public float fallingRotation = 30f;
+		public float fallingFadeTime = 2f;
 	}
 	
+	public Settings debugSettings;
+	public Settings releaseSettings;
 	public AppearanceAttributes appearance;
-	public GrowthAttributes growth;
 	public BezierCurveAttributes bezier;
 	public SplineAttributes spline;
-	public StemmingAttributes stemming;
 	
+	#endregion
+	
+	#region Public
+	public enum PlantState {Dead, Drowning, HealthyWet, VeryHealthy, HealthyDry, Withering};
+	[System.NonSerialized]public PlantState state = PlantState.VeryHealthy;
 	#endregion
 	
 	#region Properties
@@ -102,13 +126,31 @@ public class Plant : MonoBehaviour {
 	
 	public Vector3 BasePosisiton
 	{
-		get { return line.points3[0] + transform.position; }
+		get { return line.points3[0]; }
 	}
 	#endregion
 
 	#region Unity
+	void Awake()
+	{
+		ItemManager.OnRevive += Revive;
+		im = ItemManager.Instance;
+	}
+	
 	void Start()
 	{
+		//settings
+		if (useDebugSettings)
+		{
+			growth = debugSettings.growth;
+			stemming = debugSettings.stemming;
+		}
+		else
+		{
+			growth = releaseSettings.growth;
+			stemming = releaseSettings.stemming;
+		}
+	
 		//setup camera
 		depth = transform.position.z;
 		line = new VectorLine ("Plant", new Vector3[MAX_POINTS - 2], appearance.veryHealthyColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
@@ -144,6 +186,7 @@ public class Plant : MonoBehaviour {
 		
 		//appearance
 		stateTransitionSeconds = appearance.stateTransitionSeconds;
+		targetColor = appearance.veryHealthyColor;
 		
 		witheredThreshold = OPTIMUM_SATURATION - growth.aliveRange/2;
 		witheringThreshold = OPTIMUM_SATURATION - growth.healthyRange/2;
@@ -153,33 +196,32 @@ public class Plant : MonoBehaviour {
 		drownedThreshold = OPTIMUM_SATURATION + growth.aliveRange/2;
 		
 		//stemming
-		stemSide = (Random.Range(0, 2) == 0);
 		stemHeight = stemming.startingPlantHeight;
+		stemFallingFadeTime = stemming.fallingFadeTime;
+		stemSide = (Random.Range(0, 2) == 0);
 		stems = new List<Stem>();
-		stemSegmentsPer = stemming.segmentsPer;
-		targetColor = appearance.veryHealthyColor;
 		stemParent = new GameObject();
 		stemParent.name = "stemParent";
 	}
 
 	void Update()
 	{
+		//	Debug.Log ("saturation: " + saturation);
 		float deltaTime = Time.deltaTime;
 		if (state != PlantState.Dead)
 		{
-			height += deltaTime * growth.maxGrowthPerSecond * growthFactor;
-//			Debug.Log ("growth: " + growth);
+			height += deltaTime * growth.maxGrowthPerSecond * growthFactor * im.GrowMultiplier;
 			int intPart = Mathf.FloorToInt(height);
 			float decPart = height % 1;
 	
 			if (intPart >= endSegment) {
 			
-				if (intPart == lastSegment)
+				if (intPart >= lastSegment)
 				{
 					AddCurve();
 				}
-				line.points3[intPart] = Vector3.Lerp(lowPoint, highPoint, DROP_BACK_PERCENT);
-				lowPoint = highPoint;
+				//line.points3[intPart] = Vector3.Lerp(line.points3[intPart - 1], line.points3[intPart], DROP_BACK_PERCENT);
+				lowPoint = line.points3[intPart];
 				highPoint = line.points3[intPart + 1];
 				endSegment = intPart + 1;
 				line.drawEnd = endSegment;
@@ -254,10 +296,14 @@ public class Plant : MonoBehaviour {
 			else
 			{
 				float fallingTime = stemDyingTimer - stateTransitionSeconds;
-				float velocity = stemming.fallingGravity * fallingTime;
-				dyingStemTransform.Translate(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
-//				dyingStemTransform.Rotate(Vector3.forward, stemRotation * deltaTime);
-				if (stems[dyingStemIndex].line.vectorObject.transform.position.y < STEM_REMOVE_HEIGHT)
+				//dyingStemTransform.Translate(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
+				Vector3 translate = new Vector3(stemXMovement * deltaTime, stemming.fallingGravity * fallingTime, 0);
+				dyingStemTransform.localPosition += translate;
+				dyingStem.Rotate(stemming.fallingRotation * deltaTime);
+				float t = fallingTime/stemFallingFadeTime;
+				stems[dyingStemIndex].SetColor(Color.Lerp(appearance.deadColor, Color.clear, t));
+				stems[dyingStemIndex].flower.SetAlpha(1 - t);
+				if(fallingTime > stemFallingFadeTime)
 				{
 					RemoveStem();
 				}
@@ -307,20 +353,29 @@ public class Plant : MonoBehaviour {
 			
 	}
 	*/
+	
+	void OnDestroy()
+	{
+		ItemManager.OnRevive -= Revive;
+	}
 	#endregion
 	
 	#region Actions
-	public void Water()
+	public void Water(float percentOfCloud)
 	{
-		saturation += Time.deltaTime * growth.waterPerSecond;
+		saturation += percentOfCloud * growth.waterPerCloud;
 	}
 	#endregion
 
-	#region Private
+	#region Private	
 	private const int MAX_POINTS = 16384;
-	private const float DROP_BACK_PERCENT = .95f;
+	private const float DROP_BACK_PERCENT = .99f;
 	private float HEIGHT_MULTIPLIER = 10f;
 	private float growthFactor = 1f;
+	
+	private GrowthAttributes growth;
+	private StemmingAttributes stemming;
+	private ItemManager im;
 	
 	private VectorLine line;
 	private VectorLine glowLine;
@@ -357,8 +412,6 @@ public class Plant : MonoBehaviour {
 	private float witheredThreshold;
 	
 	//color transition
-	private enum PlantState {Dead, Drowning, HealthyWet, VeryHealthy, HealthyDry, Withering};
-	private PlantState state = PlantState.VeryHealthy;
 	private bool transitioning;
 	private Color targetColor;
 	private Color previousColor;
@@ -373,11 +426,10 @@ public class Plant : MonoBehaviour {
 	private Color glowAlphaColor;
 	
 	//stemming
-	private float STEM_REMOVE_HEIGHT = -20;
+	private const float STEM_DEPTH = -.02f;
 	private bool stemSide;
 	private int stemHeight;
 	private List<Stem> stems;
-	private int stemSegmentsPer;
 	private int stemWidthGrowth;
 	private float stemDeathTime;
 	private float unhealthyTimer;
@@ -386,7 +438,9 @@ public class Plant : MonoBehaviour {
 	private float stemDyingTimer;
 	private float stemXMovement;
 	private Transform dyingStemTransform;
+	private Stem dyingStem;
 	private GameObject stemParent;
+	private float stemFallingFadeTime;
 	
 	//appearanec
 	private float stateTransitionSeconds;
@@ -407,6 +461,11 @@ public class Plant : MonoBehaviour {
 		stemHeight = stemming.startingPlantHeight;
 		stems = new List<Stem>();
 		targetColor = appearance.veryHealthyColor;
+	}
+	
+	private void Revive()
+	{
+		TransitionState(PlantState.VeryHealthy);
 	}
 
 	private void AddCurve()
@@ -556,7 +615,8 @@ public class Plant : MonoBehaviour {
 	{
 		foreach(Stem stem in stems)
 		{
-			stem.SetColor(color);
+			if (stem.state != Stem.State.Dead)
+				stem.SetColor(color);
 		}
 	}
 	
@@ -612,8 +672,7 @@ public class Plant : MonoBehaviour {
 	
 	private void UpdateSaturation()
 	{
-		saturation -= growth.dryPerSecond * Time.deltaTime;
-//		Debug.Log("saturation: " + saturation);
+		saturation -= growth.dryPerSecond * Time.deltaTime * im.DryMultiplier;
 		switch (state)
 		{
 			case PlantState.Drowning:
@@ -679,12 +738,15 @@ public class Plant : MonoBehaviour {
 	
 	private void UpdateStems()
 	{
-		float newGrowth = Time.deltaTime * stemming.maxGrowthPerSecond * growthFactor;
+		float newGrowth = Time.deltaTime * stemming.maxGrowthPerSecond * growthFactor * im.GrowMultiplier;
 		
 		foreach(Stem stem in stems)
-		{	
-			stem.Grow(newGrowth, widths[stem.height]);
+		{
+			if (stem.state == Stem.State.Growing)
+				stem.Grow(newGrowth, widths[stem.height]);
 			stem.line.Draw3D();
+			if (stem.flower.state != Flower.FlowerState.Fruited)
+				stem.flower.Grow(newGrowth);
 		}
 		
 		if (height > stemHeight)
@@ -698,7 +760,7 @@ public class Plant : MonoBehaviour {
 	private void NewStem()
 	{
 		VectorLine stemLine = new VectorLine ("Stem", new Vector3[MAX_POINTS - 2], appearance.veryHealthyColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
-		stemLine.depth = 0;
+		stemLine.depth = -1;
 		stemLine.endCap = "Point";
 		stemLine.drawStart = 0;
 		//		line.drawEnd = 0;
@@ -707,6 +769,7 @@ public class Plant : MonoBehaviour {
 		stemLine.lineWidth = 1f;//temp
 		Vector3[] curve = new Vector3[4];
 		Vector3 point = line.points3[stemHeight];
+		point.z += STEM_DEPTH;
 		curve[0] = point;
 		curve[2] = point + new Vector3(Random.Range(stemming.minCurveWidth, stemming.maxCurveWidth) * (stemSide ? 1: -1), Random.Range(stemming.minCurveHeight, stemming.maxCurveHeight));
 		float angle1 = Random.Range(stemming.minControlAngle1, stemming.maxControlAngle1) *  Mathf.Deg2Rad;
@@ -715,14 +778,15 @@ public class Plant : MonoBehaviour {
 		curve[1] = point + new Vector3(Mathf.Sin(angle1) * controlLength * (stemSide ? 1: -1), Mathf.Cos(angle1) * controlLength);
 		curve[3] = curve[2] + new Vector3(Mathf.Sin(angle2) * controlLength * (stemSide ? 1: -1), Mathf.Cos(angle2) * controlLength);
 		stemLine.MakeCurve (curve, stemming.segmentsPer, 0);
-		Stem newStem = new Stem(stemLine, stemHeight, stemSegmentsPer, stemming.widthGrowth, appearance.minWidth, targetColor, stemSide);
+		GameObject flower = Instantiate(flowerPrefab) as GameObject;
+		//Debug.Log ("instantiating new flower: " + flower);
+		Stem newStem = new Stem(stemLine, stemHeight, stemming, appearance.minWidth, targetColor, stemSide, flower.GetComponent<Flower>());
 		stems.Add(newStem);
 		
 		if (drawPoints)
 		{
 			for(int i=0; i < stemLine.points3.Length; i++)
 			{
-				Debug.Log ("i");
 				Instantiate(pointMarker, stemLine.points3[i], transform.rotation);
 				//				marker.transform.position = Vector3.zero;
 			}
@@ -745,9 +809,10 @@ public class Plant : MonoBehaviour {
 			stemDying = true;
 			stemDyingTimer = 0;
 			dyingStemIndex = Random.Range(0, numOfStems);
-			Debug.Log("stem " + dyingStemIndex + "is dying");
-			stemXMovement = stemming.fallingHorizontalMovement * (stems[dyingStemIndex].leftSide ? -1 : 1);
+			stemXMovement = stemming.fallingHorizontalMovement * (stems[dyingStemIndex].rightSide ? -1 : 1);
 			dyingStemTransform = stems[dyingStemIndex].line.vectorObject.transform;
+			dyingStem = stems[dyingStemIndex];
+			stems[dyingStemIndex].state = Stem.State.Dead;
 		}
 		unhealthyTimer = 0;
 	}

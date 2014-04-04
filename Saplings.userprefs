@@ -1,10 +1,14 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\Plant.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\Stem.cs">
     <Files>
-      <File FileName="Assets\Scripts\Plant.cs" Line="123" Column="39" />
-      <File FileName="Assets\Scripts\Stem.cs" Line="24" Column="28" />
-      <File FileName="Assets\Scripts\CameraManager.cs" Line="212" Column="20" />
+      <File FileName="Assets\Scripts\Cloud.cs" Line="90" Column="41" />
+      <File FileName="Assets\Scripts\CameraManager.cs" Line="63" Column="12" />
+      <File FileName="Assets\Scripts\Plant.cs" Line="551" Column="5" />
+      <File FileName="Assets\Scripts\Cloud.cs" Line="178" Column="1" />
+      <File FileName="Assets\Scripts\Stem.cs" Line="38" Column="4" />
+      <File FileName="Assets\Scripts\Flower.cs" Line="1" Column="1" />
+      <File FileName="Assets\Scripts\ItemManager.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
