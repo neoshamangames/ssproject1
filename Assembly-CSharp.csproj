@@ -50,9 +50,8 @@
      <Compile Include="Assets\Scripts\Cloud.cs" />
      <Compile Include="Assets\Scripts\CloudCamera.cs" />
      <Compile Include="Assets\Scripts\Flower.cs" />
-     <Compile Include="Assets\Scripts\Inventory.cs" />
+     <Compile Include="Assets\Scripts\ItemManager.cs" />
      <Compile Include="Assets\Scripts\Plant.cs" />
-     <Compile Include="Assets\Scripts\PrizeManager.cs" />
      <Compile Include="Assets\Scripts\SingletonMonoBehaviour.cs" />
      <Compile Include="Assets\Scripts\Stem.cs" />
      <Compile Include="Assets\Scripts\lineTest.cs" />

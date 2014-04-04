@@ -3,15 +3,18 @@ using System.Collections;
 
 public class Flower : MonoBehaviour {
 
+	public enum FlowerState {PreBloom, Budding, Blooming, Fruited, Harvested};
+	
 	#region Attributes
 	public Plant.StemmingAttributes stemming;
+	public FlowerState state = FlowerState.PreBloom;
 	#endregion
 
 	#region Unity
 	void Awake()
 	{
 		sr = GetComponent<SpriteRenderer>();
-		pm = PrizeManager.Instance;
+		im = ItemManager.Instance;
 	}
 	
 	void Start()
@@ -21,6 +24,13 @@ public class Flower : MonoBehaviour {
 	#endregion
 	
 	#region Actions
+	public void SetAlpha(float alpha)
+	{
+		Color color = sr.color;
+		color.a = alpha;
+		sr.color = color;
+	}
+	
 	public void Grow(float newGrowth)
 	{
 		float deltaTime = Time.deltaTime;
@@ -71,10 +81,9 @@ public class Flower : MonoBehaviour {
 	{
 		if (state == FlowerState.Fruited)
 		{
-			Debug.Log ("harvesting flower");
 			transitionTime = 0;
 			state = FlowerState.Harvested;
-			pm.AwardPrize();
+			im.AwardPrize();
 			
 		}
 	}
@@ -82,12 +91,10 @@ public class Flower : MonoBehaviour {
 	
 	#region Private
 	private SpriteRenderer sr;
-	private enum FlowerState {PreBloom, Budding, Blooming, Fruited, Harvested};
-	private FlowerState state = FlowerState.PreBloom;
 	private float transitionTime = 0;
 	private float growthCounter = 0;
 	private float nextFlowerDelay;
-	private PrizeManager pm;
+	private ItemManager im;
 	
 	private void PrepareNextBud()
 	{

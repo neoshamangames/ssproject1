@@ -4,27 +4,29 @@ using Vectrosity;
 
 public class Stem : Object {
 
+	public enum State {Growing, Grown, Dead};
+	
 	#region Attributes
 	public VectorLine line;
 	public float growth = 0;
 	public int height;
-	public bool leftSide;
+	public bool rightSide;
 	public Flower flower;
-	public Transform flowerParent;
 	public Plant.StemmingAttributes stemming;
+	public State state = State.Growing;
 	#endregion
 	
 	#region Constructors
-	public Stem(VectorLine line, int height, int segments, Plant.StemmingAttributes stemming, float lineWidth, Color color, bool leftSide, Flower flower)
+	public Stem(VectorLine line, int height, Plant.StemmingAttributes stemming, float lineWidth, Color color, bool rightSide, Flower flower)
 	{
 		this.line = line;
 		lowPoint = line.points3[0];
 		highPoint = line.points3[1];
 		this.height = height;
-		this.segments = segments;
+		this.segments = stemming.segmentsPer;
 		this.stemming = stemming;
 		maxWidth = this.lineWidth = lineWidth;
-		this.leftSide = leftSide;
+		this.rightSide = rightSide;
 		float angle = Vector3.Angle(highPoint - lowPoint, Vector3.up);
 		flower.transform.localEulerAngles = new Vector3(0, 0, angle);
 		flower.transform.position = line.points3[0];
@@ -33,18 +35,22 @@ public class Stem : Object {
 		flower.stemming = stemming;
 		this.flower = flower;
 		SetColor(color);
+		direction = new Vector3();
+		//Plant plant = GameObject.Find("Plant").GetComponent<Plant>();
+		//for(int i=0; i<line.points3.Length; i++)
+		//	Instantiate(plant.pointMarker, line.points3[i], Quaternion.identity);
 	}
 	#endregion
 	
 	#region Actions	
 	public void Grow(float newGrowth, float currentWidth)
 	{	
-		if (growth < segments-1)
+		growth += newGrowth;
+		if (growth < segments - 1)
 		{
-			growth += newGrowth;
-			
 			int intPart = Mathf.FloorToInt(growth);
 			float decPart = growth % 1;
+			
 			
 			if (intPart >= endSegment)
 			{
@@ -55,26 +61,53 @@ public class Stem : Object {
 				line.drawEnd = endSegment;
 	//			Debug.Log("intPart: " + intPart);
 	//			Debug.Log("endSegment: " + endSegment);
+				
+				direction = line.points3[intPart + 1] - line.points3[intPart];
+				nextDirection = line.points3[intPart + 2] - line.points3[intPart + 1];
 			}
-			//Debug.Log("stem.line.drawEnd: " + stem.line.drawEnd);
 			line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
 			flower.transform.position = line.points3[intPart + 1];
-			Vector3 direction = line.points3[intPart + 1] - line.points3[intPart];
+			//Debug.Log("stem.line.drawEnd: " + stem.line.drawEnd);
 			float angle = Vector3.Angle(direction, Vector3.up);
 			float sign = Mathf.Sign(Vector3.Dot(direction, Vector3.right));
-			angle *= sign;
-			flower.transform.localEulerAngles = new Vector3(0, 0, -angle);
+			Quaternion startRotation = Quaternion.Euler(0, 0, -angle * sign);
+			float nextAngle = Vector3.Angle(nextDirection, Vector3.up);
+			float nextSign = Mathf.Sign(Vector3.Dot(nextDirection, Vector3.right));
+			Quaternion finishRotation = Quaternion.Euler(0, 0, -nextAngle * nextSign);
+			angle = sign * Mathf.Lerp(angle, nextAngle, decPart);
+			prevSign = sign;
+			//flower.transform.localEulerAngles = new Vector3(0, 0, -angle);
+			flower.transform.rotation = Quaternion.Lerp(startRotation, finishRotation, decPart);
 		}
-		maxWidth = Mathf.Clamp(Mathf.Clamp(maxWidth + stemming.widthGrowth, 0, currentWidth), 0, stemming.maxWidth);
+		maxWidth = Mathf.Clamp(maxWidth + stemming.widthGrowth, 0, currentWidth);
+		if (maxWidth > stemming.maxWidth)
+		{
+			maxWidth = stemming.maxWidth;
+			state = State.Grown;
+		}
 		UpdateWidth();
-		flower.Grow(newGrowth);
 	}
-	
-	
 	
 	public void SetColor(Color color)
 	{
 		line.SetColor(color);
+	}
+	
+	public void Rotate(float angle)
+	{
+		if (rightSide)
+			angle *= -1;
+		float angleRad = angle * Mathf.Deg2Rad;
+		Vector3 pivot = line.points3[0];
+		for(int i=0; i<=endSegment; i++)
+		{
+			Vector3 point = line.points3[i];
+			float newX = pivot.x + (point.x-pivot.x)*Mathf.Cos(angleRad) - (point.y-pivot.y)*Mathf.Sin(angleRad);
+			float newY = pivot.y + (point.x-pivot.x)*Mathf.Sin(angleRad) + (point.y-pivot.y)*Mathf.Cos(angleRad);
+			line.points3[i] = new Vector3(newX, newY, pivot.z);
+		}
+		flower.transform.localPosition = line.points3[endSegment];
+		flower.transform.localEulerAngles += new Vector3(0, 0, angle);
 	}
 	#endregion
 	
@@ -88,6 +121,8 @@ public class Stem : Object {
 	private int segments;
 	private float widthGrowth;
 	private float maxWidth;
+	private Vector3 direction, nextDirection;
+	private float prevSign;
 	
 	private void UpdateWidth()
 	{

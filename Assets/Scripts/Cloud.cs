@@ -9,8 +9,12 @@ public class Cloud : MonoBehaviour {
 	public Material raindropMaterial;
 	public Transform raindropRoot;
 	public Plant plant;
-	[Range(0, 1)]public float growthRate;
-	[Range(0, 1)]public float depletionRate;
+	public bool useDebugRefillTime;
+	[Range(1, 200000)]public float debugRefillTime = 10f;
+	[Range(1, 200000)]public float releaseRefillTime = 10f;//43200 (12 hours)
+	[Range(1, 60)]public float depletionTime;
+	[Range(0, 2)]public float startSize = 1f;
+	[Range(0, 5)]public float minSize = .25f;
 	[Range(0, 5)]public float maxSize = 2f;
 	[Range(0, 1)]public float darkestGrey = .25f;
 	[Range(0, 100)]public float dropsPerFrameMax = .05f;
@@ -25,7 +29,6 @@ public class Cloud : MonoBehaviour {
 	[Range(0, 500)]public float maxRaindropLength = 1f;
 	[Range(0, 1)]public float raindropLengthVariety = .01f;
 	[Range(0, 500)]public float raindropSpeed = 10f;
-	[Range(0, 2)]public float startSize = 1f;
 	public Vector3 cloudOffset;
 	#endregion
 
@@ -41,13 +44,16 @@ public class Cloud : MonoBehaviour {
 		raindropLengths = new List<float>();
 		float distanceFromCam = transform.position.z - cloudCam.transform.position.z;
 		screenHeight = cloudCam.ViewportToWorldPoint(new Vector3(0, 1, distanceFromCam)).y - cloudCam.ViewportToWorldPoint(new Vector3(0, 0, distanceFromCam)).y;
-		Debug.Log("screenHeight: " + screenHeight);
+		growthRate = (maxSize - minSize) / (useDebugRefillTime ? debugRefillTime : releaseRefillTime);
+		depletionRate = (maxSize - minSize) / depletionTime;
 	}
-	
+
 	void Update()
 	{
+		max = plant.TopPosisiton.y;
 		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton + cloudOffset);
 		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos);
+		prevYPos = cloudScreenPos.y;
 		currentScale = transform.localScale;
 		cloudPercentage = currentScale.x/maxSize;
 		float cloudGrey = Mathf.Lerp(1, darkestGrey, cloudPercentage);
@@ -70,12 +76,12 @@ public class Cloud : MonoBehaviour {
 	#region Actions
 	public void Rain(float deltaTime)
 	{
-		if (currentScale.x > 0)
+		if (currentScale.x > minSize)
 		{
 			raining = true;
 			float rain = -deltaTime * depletionRate;
 			ScaleCloud(rain);
-			plant.Water();
+			plant.Water(deltaTime / depletionTime);
 		}
 	}
 	#endregion
@@ -95,8 +101,9 @@ public class Cloud : MonoBehaviour {
 	private List<float> raindropLengths;
 	Touch firstTouch;
 	Touch secondTouch;
-	
-	
+	private float prevYPos;
+	private float max;
+	private float growthRate, depletionRate;
 	
 	private void ScaleCloud(float scale)
 	{
