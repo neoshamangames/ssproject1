@@ -54,6 +54,7 @@
      <Compile Include="Assets\Scripts\Plant.cs" />
      <Compile Include="Assets\Scripts\SingletonMonoBehaviour.cs" />
      <Compile Include="Assets\Scripts\Stem.cs" />
+     <Compile Include="Assets\Scripts\letter.cs" />
      <Compile Include="Assets\Scripts\lineTest.cs" />
      <None Include="Assets\VectrosityDemos\Shaders\ParticleZwrite.shader" />
      <None Include="Assets\VectrosityDemos\Shaders\Unlit .shader" />

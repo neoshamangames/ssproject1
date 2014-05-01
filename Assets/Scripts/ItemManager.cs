@@ -78,7 +78,6 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		}
 		if (grow.timeRemaining > 0)
 		{
-			Debug.Log("grow faster active " + (int)grow.timeRemaining + " seconds remain");
 			grow.timeRemaining -= deltaTime;
 			if (grow.timeRemaining < 0)
 				grow.value = 1f;
@@ -191,7 +190,6 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	
 	private void Activate(Prize prize)
 	{
-		Debug.Log ("Activating " + prize.name);
 		switch (prize.name)
 		{
 		case "revive":
@@ -202,7 +200,6 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			dry.timeRemaining = drySlowerTime;
 			break;
 		case "grow faster":
-			Debug.Log ("grow faster case");
 			grow.value = growFasterMultiplier;
 			grow.timeRemaining = growFasterTime;
 			break;

@@ -426,7 +426,7 @@ public class Plant : MonoBehaviour {
 	private Color glowAlphaColor;
 	
 	//stemming
-	private const float STEM_DEPTH = -.02f;
+	private const float STEM_DEPTH = .05f;
 	private bool stemSide;
 	private int stemHeight;
 	private List<Stem> stems;
