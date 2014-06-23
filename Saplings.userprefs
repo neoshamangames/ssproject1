@@ -1,14 +1,8 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\Plant.cs">
+  <MonoDevelop.Ide.Workspace />
+  <MonoDevelop.Ide.Workbench ActiveDocument="..\Tarot\Assets\ROTATE.cs">
     <Files>
-      <File FileName="Assets\Scripts\Cloud.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\Flower.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\Cloud.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\CameraManager.cs" Line="246" Column="44" />
-      <File FileName="Assets\Scripts\Plant.cs" Line="429" Column="36" />
-      <File FileName="Assets\Scripts\Stem.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\ItemManager.cs" Line="82" Column="31" />
+      <File FileName="..\Tarot\Assets\ROTATE.cs" Line="15" Column="35" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

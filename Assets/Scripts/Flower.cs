@@ -9,6 +9,36 @@ public class Flower : MonoBehaviour {
 	public Plant.StemmingAttributes stemming;
 	public FlowerState state = FlowerState.PreBloom;
 	#endregion
+	
+	#region Properties
+	public float GrowthState
+	{
+		get
+		{
+			float val = 0;
+			switch (state)
+			{
+			case FlowerState.PreBloom:
+				val = growthCounter - nextFlowerDelay;//should be negative
+				break;
+				
+			case FlowerState.Blooming:
+				val = transform.localScale.x;//should be positive
+				break;
+				
+			case FlowerState.Budding:				
+			case FlowerState.Fruited:
+				val = 0;
+				break;
+				
+			case FlowerState.Harvested:
+				val = -nextFlowerDelay;
+				break;
+			}
+			return val;
+		}
+	}
+	#endregion
 
 	#region Unity
 	void Awake()
@@ -24,6 +54,27 @@ public class Flower : MonoBehaviour {
 	#endregion
 	
 	#region Actions
+	public void LoadGrowthState(float growthState)
+	{
+		if (growthState == 0)
+		{
+			state = FlowerState.Fruited;
+			float scale = stemming.maxFlowerSize;
+			transform.localScale = new Vector3(scale, scale, scale);
+			sr.color = Color.red;
+		}
+		else if (growthState < 0)
+		{
+			state = FlowerState.PreBloom;
+			nextFlowerDelay = -growthState;
+		}
+		else
+		{
+			state = FlowerState.Blooming;
+			transform.localScale = new Vector3(growthState, growthState, growthState);
+		}
+	}
+	
 	public void SetAlpha(float alpha)
 	{
 		Color color = sr.color;
@@ -93,7 +144,7 @@ public class Flower : MonoBehaviour {
 	private SpriteRenderer sr;
 	private float transitionTime = 0;
 	private float growthCounter = 0;
-	private float nextFlowerDelay;
+	private float nextFlowerDelay;//TODO: remove this since it is superfluous. always == stemming.newFlowerDelay
 	private ItemManager im;
 	
 	private void PrepareNextBud()

@@ -46,6 +46,7 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\Scripts\Editor\ItemManagerEditor.cs" />
      <Compile Include="Assets\unityIRC\Editor\unityIRC.cs" />
      <None Include="Assets\VectrosityDemos\Shaders\ParticleZwrite.shader" />
      <None Include="Assets\VectrosityDemos\Shaders\Unlit .shader" />

@@ -20,6 +20,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public float scrollFriction = .01f;
 	[Range(0, 50)]public float minFOV = 40f;
 	[Range(0, 50)]public float maxFOV = 120f; 
+	[Range (.5f, 60)]public float popBackTime = 5f;
 	#endregion
 
 	#region Properties	
@@ -32,6 +33,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	#region Unity
 	void Awake() {
 		mainCam = Camera.main;
+		dm = DataManager.Instance;
 		VectorLine.SetCamera3D(mainCam);
 		vectorCam = VectorLine.SetCamera(cloudCam);
 		vectorCam.orthographic = true;
@@ -48,13 +50,24 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	void Start()
 	{
+		float heightLoaded = dm.heightLoaded;
+		if (heightLoaded > 0)
+		{
+			CenterCamera();
+		}
 		CalculateEdges();
 	}
 
 	void Update () {
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
 		float plantY = plant.TopPosisiton.y;
-		bool inScrollRange = plantY > scrollEdge && plantY < topEdge;
+		bool inScrollRange = false;
+		if (plantY > topEdge)
+		{
+			lastTouchTimer += Time.deltaTime;
+		}
+		else
+			inScrollRange = plantY > scrollEdge;
 //		if(plantY < max)
 //			Debug.Log ("ERROR");
 		if (!prevCoordsSet)
@@ -68,6 +81,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			}
 		}
 		prevPlantY = plantY;
+		
+		if (lastTouchTimer > popBackTime)
+			CenterCamera();
 
 		#if UNITY_EDITOR
 		Vector2 mousePos = Input.mousePosition;
@@ -177,6 +193,8 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private bool prevDistanceSet;
 	private float prevPlantY;
 	private float scrollMomentum, scrollDirection;
+	private DataManager dm;
+	private float lastTouchTimer;
 	
 //	private float max =0;//temp
 	
@@ -200,6 +218,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	private void ProcessTouch(Vector2 coordinates)
 	{
+		lastTouchTimer = 0;
 		Ray ray = cloudCam.ScreenPointToRay(coordinates);
 		RaycastHit hit;
 		if (touchBeganOnCloud)
@@ -271,6 +290,14 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 //		Debug.Log("coordsDelta: " + coordsDelta);
 //		Debug.Log("posDelta: " + posDelta);
 		CalculateEdges();
+	}
+	
+	void CenterCamera()
+	{
+		float plantY = plant.TopPosisiton.y;
+		Vector3 pos = mainCam.transform.position;
+		pos.y = plantY;
+		mainCam.transform.position = pos;
 	}
 	
 	void MoveCamera(Vector3 movement)
