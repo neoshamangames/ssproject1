@@ -16,20 +16,32 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	[Range(0, 50)]public float backgroundMovementFactor = 1f;
 	[Range(0, 50)]public float mouseZoomSensitivity = 2f;
 	[Range(0, 50)]public float pinchZoomSensitivity = 2f;
-	[Range(0, 50)]public float minFOV = 40f;
-	[Range(0, 50)]public float maxFOV = 120f; 
+	public float scrollMomentumSensitivity = 1f;
+	public float scrollFriction = .01f;
+	[Range(0, 120)]public float minFOV = 40f;
+	[Range(0, 120)]public float maxFOV = 120f; 
+	[Range (.5f, 60)]public float popBackTime = 5f;
+	[Range (0, 2)]public float doubleTapTimeout = .5f;
 	#endregion
 
-	#region Properties	
+	#region Properties
 	public float Width
 	{
 		get {return width; }
+	}
+	#endregion
+	
+	#region Actions
+	public void Reset()
+	{
+		SetCameraY(0);
 	}
 	#endregion
 
 	#region Unity
 	void Awake() {
 		mainCam = Camera.main;
+		dm = DataManager.Instance;
 		VectorLine.SetCamera3D(mainCam);
 		vectorCam = VectorLine.SetCamera(cloudCam);
 		vectorCam.orthographic = true;
@@ -46,13 +58,24 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	void Start()
 	{
+		float heightLoaded = dm.heightLoaded;
+		if (heightLoaded > 0)
+		{
+			GoToPlantTop();
+		}
 		CalculateEdges();
 	}
 
 	void Update () {
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
 		float plantY = plant.TopPosisiton.y;
-		bool inScrollRange = plantY > scrollEdge && plantY < topEdge;
+		bool inScrollRange = false;
+		if (plantY > topEdge)
+		{
+			lastTouchTimer += Time.deltaTime;
+		}
+		else
+			inScrollRange = plantY > scrollEdge;
 //		if(plantY < max)
 //			Debug.Log ("ERROR");
 		if (!prevCoordsSet)
@@ -66,11 +89,18 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			}
 		}
 		prevPlantY = plantY;
+		
+		if (lastTouchTimer > popBackTime)
+			GoToPlantTop();
 
 		#if UNITY_EDITOR
 		Vector2 mousePos = Input.mousePosition;
 		if (Input.GetMouseButtonDown(0))
 			ProcessTouchBegan(mousePos);
+		else if (Input.GetMouseButtonUp(0))
+		{
+			ProcessTouchEnded(mousePos);		
+		}
 			
 		if (Input.GetMouseButton(0))
 		{
@@ -79,6 +109,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		else
 		{
 			prevCoordsSet = false;
+			if (scrollMomentum > 0)
+			{
+				ProcessMomentum();
+			}
 		}
 		float scroll = Input.GetAxis("Mouse ScrollWheel");
 		if (scroll != 0)
@@ -94,6 +128,11 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			Vector2 firstTouchPos = firstTouch.position;
 			if (firstTouch.phase == TouchPhase.Began)
 				ProcessTouchBegan(firstTouchPos);
+				
+			if (firstTouch.phase == TouchPhase.Ended)
+			{
+				ProcessTouchEnded(firstTouchPos);
+			}
 			
 			if (firstTouch.phase != TouchPhase.Ended && firstTouch.phase != TouchPhase.Canceled)
 			{
@@ -126,6 +165,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			else
 			{
 				prevDistanceSet = false;
+				if (scrollMomentum > 0)
+				{
+					ProcessMomentum();
+				}
 			}
 		}
 		#endif
@@ -153,9 +196,13 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private Vector2 prevCoords;
 	private bool prevCoordsSet;
 	private bool touchBeganOnCloud;
+	private Collider flowerTouched;
 	private float prevDistance;
 	private bool prevDistanceSet;
 	private float prevPlantY;
+	private float scrollMomentum, scrollDirection;
+	private DataManager dm;
+	private float lastTouchTimer;
 	
 //	private float max =0;//temp
 	
@@ -166,17 +213,23 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		RaycastHit hit;
 		
 		touchBeganOnCloud = (Physics.Raycast(cloudRay));
-			
+		
+		flowerTouched = null;
+		
 		if (Physics.Raycast(mainRay, out hit, Mathf.Infinity, notCloudLayer))
 		{
 			Collider collider = hit.collider;
 			if (collider != null && collider.tag == "Flower")
-				collider.gameObject.GetComponent<Flower>().ProcessClick();
+				flowerTouched = collider;
 		}
+		
+		if (lastTouchTimer < doubleTapTimeout  && scrollMomentum == 0)
+			ProcessDoubleTap();
 	}
 	
 	private void ProcessTouch(Vector2 coordinates)
 	{
+		lastTouchTimer = 0;
 		Ray ray = cloudCam.ScreenPointToRay(coordinates);
 		RaycastHit hit;
 		if (touchBeganOnCloud)
@@ -197,6 +250,39 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			prevCoords = coordinates;
 			prevCoordsSet = true;
 		}
+	}
+	
+	private void ProcessTouchEnded(Vector2 coordinates)
+	{
+		if (!touchBeganOnCloud)
+		{
+			scrollMomentum = (prevCoords.y - coordinates.y) * scrollMomentumSensitivity;
+			scrollDirection = (scrollMomentum > 0) ? 1 : -1;
+			scrollMomentum = Mathf.Abs(scrollMomentum);
+		}
+		if (flowerTouched)
+		{
+			Ray mainRay = mainCam.ScreenPointToRay(coordinates);
+			RaycastHit hit;
+			if (Physics.Raycast(mainRay, out hit, Mathf.Infinity, notCloudLayer))
+			{
+				Collider collider = hit.collider;
+				if (collider == flowerTouched)
+					flowerTouched.gameObject.GetComponent<Flower>().ProcessClick();
+			}
+		}
+	}
+	
+	private void ProcessDoubleTap()
+	{
+		GoToPlantTop();
+	}
+	
+	private void ProcessMomentum()
+	{
+		MoveCamera(new Vector3(0, scrollMomentum * scrollDirection) );
+		scrollMomentum -= scrollFriction * Time.deltaTime;
+//		Debug.Log ("scrollMomentum: " + scrollMomentum);
 	}
 	
 	private void ProcessZoom(Vector2 coordinates, float delta)
@@ -222,6 +308,12 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		CalculateEdges();
 	}
 	
+	void GoToPlantTop()
+	{
+		float plantY = plant.TopPosisiton.y;
+		SetCameraY(plantY);
+	}
+	
 	void MoveCamera(Vector3 movement)
 	{
 //		Debug.Log("Move cam: " + movement);
@@ -231,6 +323,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		if (topPos.y < topScrollBuffer ||  basePos.y > (1 - bottomScrollBuffer) || basePos.x  < xScrollBuffer || basePos.x > (1 - xScrollBuffer))
 		{
 			mainCam.transform.position -= movement;
+			scrollMomentum = 0;
 			return;
 		}
 		CalculateEdges();

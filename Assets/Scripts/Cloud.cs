@@ -31,6 +31,14 @@ public class Cloud : MonoBehaviour {
 	[Range(0, 500)]public float raindropSpeed = 10f;
 	public Vector3 cloudOffset;
 	#endregion
+	
+	#region Properties
+	public float Size
+	{
+		get { return transform.localScale.x; }
+		set { transform.localScale = new Vector3(value, value, 1); }
+	}
+	#endregion
 
 	#region Unity
 	void Awake()
@@ -38,6 +46,7 @@ public class Cloud : MonoBehaviour {
 		cloudCam = CloudCamera.Instance.camera;
 		mainCam = Camera.main;
 		transform.localScale = new Vector3(startSize, startSize, 1);
+		Debug.Log ("cloud Awake");
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
 		raindropTimers = new List<float>();
