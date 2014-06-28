@@ -18,15 +18,23 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	[Range(0, 50)]public float pinchZoomSensitivity = 2f;
 	public float scrollMomentumSensitivity = 1f;
 	public float scrollFriction = .01f;
-	[Range(0, 50)]public float minFOV = 40f;
-	[Range(0, 50)]public float maxFOV = 120f; 
+	[Range(0, 120)]public float minFOV = 40f;
+	[Range(0, 120)]public float maxFOV = 120f; 
 	[Range (.5f, 60)]public float popBackTime = 5f;
+	[Range (0, 2)]public float doubleTapTimeout = .5f;
 	#endregion
 
-	#region Properties	
+	#region Properties
 	public float Width
 	{
 		get {return width; }
+	}
+	#endregion
+	
+	#region Actions
+	public void Reset()
+	{
+		SetCameraY(0);
 	}
 	#endregion
 
@@ -53,7 +61,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		float heightLoaded = dm.heightLoaded;
 		if (heightLoaded > 0)
 		{
-			CenterCamera();
+			GoToPlantTop();
 		}
 		CalculateEdges();
 	}
@@ -83,7 +91,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		prevPlantY = plantY;
 		
 		if (lastTouchTimer > popBackTime)
-			CenterCamera();
+			GoToPlantTop();
 
 		#if UNITY_EDITOR
 		Vector2 mousePos = Input.mousePosition;
@@ -214,6 +222,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			if (collider != null && collider.tag == "Flower")
 				flowerTouched = collider;
 		}
+		
+		if (lastTouchTimer < doubleTapTimeout  && scrollMomentum == 0)
+			ProcessDoubleTap();
 	}
 	
 	private void ProcessTouch(Vector2 coordinates)
@@ -262,6 +273,11 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		}
 	}
 	
+	private void ProcessDoubleTap()
+	{
+		GoToPlantTop();
+	}
+	
 	private void ProcessMomentum()
 	{
 		MoveCamera(new Vector3(0, scrollMomentum * scrollDirection) );
@@ -292,12 +308,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		CalculateEdges();
 	}
 	
-	void CenterCamera()
+	void GoToPlantTop()
 	{
 		float plantY = plant.TopPosisiton.y;
-		Vector3 pos = mainCam.transform.position;
-		pos.y = plantY;
-		mainCam.transform.position = pos;
+		SetCameraY(plantY);
 	}
 	
 	void MoveCamera(Vector3 movement)

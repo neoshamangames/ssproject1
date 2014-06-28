@@ -1,7 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 
 public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	
@@ -22,6 +24,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	public float drySlowerTime;
 	[Range(0,1)]public float drySlowerMultiplier = .5f;
 	
+	#if UNITY_EDITOR
 	[CustomPropertyDrawer (typeof(Prize))]
 	class PrizeDrawer : PropertyDrawer
 	{
@@ -32,12 +35,12 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		{
 			
 			SerializedProperty pieces = prop.FindPropertyRelative("pieces");
-			float height = 120;
+			float height = 180;
 			piecesHeight = 0;
 			if (pieces.isExpanded)
 			{
 				int count = pieces.CountInProperty();
-				piecesHeight = count * 15;
+				piecesHeight = count * 20;
 				height += piecesHeight;
 			}
 			
@@ -50,25 +53,32 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		
 		public override void OnGUI (Rect pos, SerializedProperty prop, GUIContent label) {
 			
-			//			EditorGUI.BeginProperty (pos, label, prop); 
-			
 			SerializedProperty type = prop.FindPropertyRelative ("type");
 			SerializedProperty name = prop.FindPropertyRelative ("name");
+			SerializedProperty offTexture = prop.FindPropertyRelative("offTexture");
+			SerializedProperty texture = prop.FindPropertyRelative("texture");
+			SerializedProperty multipleTexture = prop.FindPropertyRelative("multipleTexture");
 			SerializedProperty rarity = prop.FindPropertyRelative ("rarity");
 			SerializedProperty pieces = prop.FindPropertyRelative("pieces");
 			SerializedProperty inventory = prop.FindPropertyRelative("inventory");
 			
 			Rect nameRect = new Rect (pos.x, pos.y + 5, pos.width, 15);
 			Rect typeRect = new Rect (pos.x, pos.y + 25, pos.width, 15);
-			Rect rarityRect = new Rect (pos.x, pos.y + 45, pos.width, 15);
-			Rect piecesRect = new Rect(pos.x, pos.y + 65, pos.width, 15);
-			Rect inventoryRect = new Rect(pos.x, pos.y + 85 + piecesHeight, pos.width, 15);
+			Rect offTextureRect = new Rect (pos.x, pos.y + 45, pos.width, 15);
+			Rect textureRect = new Rect (pos.x, pos.y + 65, pos.width, 15);
+			Rect multipleTextureRect = new Rect (pos.x, pos.y + 85, pos.width, 15);
+			Rect rarityRect = new Rect (pos.x, pos.y + 105, pos.width, 15);
+			Rect piecesRect = new Rect(pos.x, pos.y + 125, pos.width, 15);
+			Rect inventoryRect = new Rect(pos.x, pos.y + 145 + piecesHeight, pos.width, 15);
 			
 			int indent = EditorGUI.indentLevel;
 			//			EditorGUI.indentLevel = 0;
 			
 			EditorGUI.PropertyField(nameRect, name);
 			EditorGUI.PropertyField(typeRect, type);
+			EditorGUI.PropertyField(offTextureRect, offTexture);
+			EditorGUI.PropertyField(textureRect, texture);
+			EditorGUI.PropertyField(multipleTextureRect, multipleTexture);
 			EditorGUI.PropertyField(rarityRect, rarity);
 			EditorGUI.PropertyField(inventoryRect, inventory);
 			EditorGUI.PropertyField(piecesRect, pieces, true);
@@ -81,10 +91,10 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				SerializedProperty powerupTimeRemaining = prop.FindPropertyRelative("powerupTimeRemaining");
 				SerializedProperty powerupValue = prop.FindPropertyRelative("powerupValue");
 				
-				Rect powerupMultiplierRect = new Rect(pos.x, pos.y + 105 + piecesHeight, pos.width/2, 15);
-				Rect powerupActiveTimeRect = new Rect(pos.x, pos.y + 125 + piecesHeight, pos.width/2, 15);
-				Rect powerupTimeRemainingRect = new Rect(pos.x + pos.width/2, pos.y + 125 + piecesHeight, pos.width/2, 15);
-				Rect powerupValueRect = new Rect(pos.x + pos.width/2, pos.y + 105 + piecesHeight, pos.width/2, 15);
+				Rect powerupMultiplierRect = new Rect(pos.x, pos.y + 165 + piecesHeight, pos.width/2, 15);
+				Rect powerupActiveTimeRect = new Rect(pos.x, pos.y + 185 + piecesHeight, pos.width/2, 15);
+				Rect powerupTimeRemainingRect = new Rect(pos.x + pos.width/2, pos.y + 185 + piecesHeight, pos.width/2, 15);
+				Rect powerupValueRect = new Rect(pos.x + pos.width/2, pos.y + 165 + piecesHeight, pos.width/2, 15);
 				
 				EditorGUI.PropertyField(powerupMultiplierRect, powerupMultiplier);
 				EditorGUI.PropertyField(powerupActiveTimeRect, powerupActiveTime);
@@ -101,12 +111,16 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			//			EditorGUI.EndProperty ();
 		}
 	}
+	#endif
 	
 	[System.Serializable]
 	public class Prize
 	{
 		public Type type;
 		public string name;
+		public Texture2D offTexture;
+		public Texture2D texture;
+		public Texture2D multipleTexture;
 		[Range(.1f, 2)]public float rarity = 1f;
 		public Piece[] pieces;
 		public int inventory;
@@ -120,6 +134,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	public class Piece
 	{
 		public Texture2D texture;
+		public Texture2D offTexture;
 		public int inventory;
 	}
 	
@@ -171,6 +186,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		}
 	}
 	
+	/*
 	void OnGUI()//temp
 	{
 		float y = 10;
@@ -193,6 +209,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		if (powerups[1].powerupTimeRemaining > 0)
 			GUI.Label(new Rect(25, Screen.height - 100, 500, 25), "dry slower active " + (int)powerups[1].powerupTimeRemaining + " seconds remain");
 	}
+	*/
 	#endregion
 	
 	#region Actions

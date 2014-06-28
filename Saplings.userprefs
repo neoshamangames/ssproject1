@@ -1,8 +1,13 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace />
-  <MonoDevelop.Ide.Workbench ActiveDocument="..\Tarot\Assets\ROTATE.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\GUIManager.cs">
     <Files>
-      <File FileName="..\Tarot\Assets\ROTATE.cs" Line="15" Column="35" />
+      <File FileName="Assets\Scripts\ItemManager.cs" Line="38" Column="21" />
+      <File FileName="Assets\Scripts\ItemManager.cs" Line="307" Column="1" />
+      <File FileName="Assets\Scripts\GUIManager.cs" Line="79" Column="20" />
+      <File FileName="Assets\Scripts\CameraManager.cs" Line="1" Column="1" />
+      <File FileName="Assets\Scripts\Plant.cs" Line="452" Column="25" />
+      <File FileName="Assets\Scripts\DataManager.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

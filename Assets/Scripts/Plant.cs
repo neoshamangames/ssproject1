@@ -197,6 +197,13 @@ public class Plant : MonoBehaviour {
 		get { return stemDeathTime - unhealthyTimer; }
 	}
 	#endregion
+	
+	#region Actions
+	public void Reset()
+	{
+		Initialize(true);
+	}
+	#endregion
 
 	#region Unity
 	void Awake()
@@ -227,10 +234,6 @@ public class Plant : MonoBehaviour {
 		drowningThreshold = OPTIMUM_SATURATION + growth.healthyRange/2;
 		drownedThreshold = OPTIMUM_SATURATION + growth.aliveRange/2;
 		
-		//setup camera
-		depth = transform.position.z;
-		lines = new List<VectorLine>();
-		lastSegments = new List<int>();
 		
 		//End Cap
 		VectorLine.SetEndCap ("Point", EndCap.Back, appearance.normalMaterial, appearance.frontCapTexture);
@@ -242,55 +245,24 @@ public class Plant : MonoBehaviour {
 		controlLine1 = new VectorLine ("Control Line 1", new Vector3[2], Color.red, null, 1f);
 		controlLine2 = new VectorLine ("Control Line 2", new Vector3[2], Color.red, null, 1f);
 		curvePoints = new Vector3[4];
-		startPoint.x = transform.position.x;
-		startPoint.y = transform.position.y;
-		startPoint.z = depth;
-		finishPoint.x = transform.position.x;
-		finishPoint.y = transform.position.y;
-		finishPoint.z = depth;
 		
-		splineSide = (Random.Range(0, 2) == 0);
 		
 		//growth
 		widthSegments = (float)appearance.widthSegments;
 		
 		//appearance
 		stateTransitionSeconds = appearance.stateTransitionSeconds;
-		targetColor = appearance.veryHealthyColor;
+		
+		depth = transform.position.z;
 		
 		//stemming
-		nextStemHeight = stemming.startingPlantHeight;
 		stemFallingFadeTime = stemming.fallingFadeTime;
-		stemSide = (Random.Range(0, 2) == 0);
-		stems = new List<Stem>();
 		stemParent = new GameObject();
-		stemParent.name = "stemParent";
+		lineParent = new GameObject();
+		stemParent.name = "stems";
+		lineParent.name = "lines";
 		
-		if(dm.curvePointsLoaded.Count > 0)
-		{
-			LoadState();
-			LoadCurves();
-			UpdateWidth();
-			if (dm.stemLengthsLoaded.Count > 0)
-				LoadStems();
-		}
-		else
-		{
-			//start with 2 lines
-			NewLine(true);
-			lastSegment = lastSegments[0];
-			NewLine(false);
-			UpdateWidth();
-			dm.SaveData();
-		}
-		
-		
-
-		//create 2 lines, each with a certain number of curves
-
-
-		lowPoint = lines[0].points3[0];
-		highPoint = lines[0].points3[2];
+		Initialize();
 	}
 
 	void Update()
@@ -558,28 +530,71 @@ public class Plant : MonoBehaviour {
 	private float stemXMovement;
 	private Transform dyingStemTransform;
 	private Stem dyingStem;
-	private GameObject stemParent;
+	private GameObject stemParent, lineParent;
 	private float stemFallingFadeTime;
 	private int stemCount;
 	
 	//appearanece
 	private float stateTransitionSeconds;
 	
-	private void Restart() //TODO: NEEDS TO BE ADAPTED TO MULTIPLE LINE SCHEMA!
+	private void Initialize(bool reset = false)
 	{
 		height = 0;
 		endSegment = 1;
-//		line.drawEnd = 1;
-		lastSegment = 0;
+		
+		startPoint.x = transform.position.x;
+		startPoint.y = transform.position.y;
+		startPoint.z = depth;
 		finishPoint.x = transform.position.x;
 		finishPoint.y = transform.position.y;
 		finishPoint.z = depth;
-//		lowPoint = line.points3[0];
-//		highPoint = line.points3[1];
-		stemSide = (Random.Range(0, 2) == 0);
-		nextStemHeight = stemming.startingPlantHeight;
-		stems = new List<Stem>();
+		
+		
 		targetColor = appearance.veryHealthyColor;
+		splineSide = (Random.Range(0, 2) == 0);
+		
+		lines = new List<VectorLine>();
+		lastSegments = new List<int>();
+		lineIndex = 0;
+		
+		//stemming
+		nextStemHeight = stemming.startingPlantHeight;
+		stemSide = (Random.Range(0, 2) == 0);
+		stems = new List<Stem>();
+		stemCount = 0;
+		if (reset)
+		{
+			Destroy(lineParent);
+			Destroy(stemParent);
+			lineParent = new GameObject();
+			lineParent.name = "lines";
+			stemParent = new GameObject();
+			stemParent.name = "stems";
+		}
+		if(!reset && dm.curvePointsLoaded.Count > 0)
+		{
+			LoadState();
+			LoadCurves();
+			UpdateWidth();
+			if (dm.stemLengthsLoaded.Count > 0)
+				LoadStems();
+		}
+		else
+		{
+			dm.Reset();
+			//start with 2 lines
+			NewLine(true);
+			lastSegment = lastSegments[0];
+			NewLine(false);
+			UpdateWidth();
+			dm.SaveData();
+			state = PlantState.VeryHealthy;
+			growthFactor = 1;
+			saturation = OPTIMUM_SATURATION;
+		}		
+		
+		lowPoint = lines[0].points3[0];
+		highPoint = lines[0].points3[2];	
 	}
 	
 	private void Revive()
@@ -620,6 +635,7 @@ public class Plant : MonoBehaviour {
 	{
 		Color lineColor = loadCurves ? (Color)loadedColor : firstLine ? appearance.veryHealthyColor : lines[0].color;
 		VectorLine line =  new VectorLine ("Plant " + lines.Count, new Vector3[POINTS_PER_LINE], lineColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
+		line.vectorObject.transform.parent = lineParent.transform;
 		line.smoothWidth = true;
 		line.depth = 1;
 		lastSegments.Add(0);
@@ -1095,6 +1111,7 @@ public class Plant : MonoBehaviour {
 		float plantWidth = appearance.minWidth;
 		
 		VectorLine stemLine = new VectorLine ("Stem", new Vector3[POINTS_PER_LINE], targetColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
+		stemLine.vectorObject.transform.parent = stemParent.transform;
 		stemLine.depth = -1;
 		stemLine.endCap = "Point";
 		stemLine.drawStart = 0;

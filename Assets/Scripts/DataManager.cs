@@ -55,6 +55,14 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	#endregion
 	
 	#region Actions
+	public void Reset()
+	{
+		numberOfCurves = 0;
+		plantCurvePoints = new List<byte[]>();
+		stemCurvePoints = new List<byte[]>();
+		segments = new List<byte[]>();
+	}
+	
 	public void StoreCurve(Vector3[] curvePoints, ushort segment)
 	{
 		plantCurvePoints.Add(BitConverter.GetBytes(curvePoints[0].x));
@@ -191,6 +199,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		byte[] numberOfPowerupsBytes = BitConverter.GetBytes(numberOfPowerups);
 		data.Add(numberOfPowerupsBytes[0]);
 		data.Add(numberOfPowerupsBytes[1]);
+		Debug.Log ("storing numberOfPowerups as " + numberOfPowerups);
 		for(int i=0; i <numberOfPowerups; i++)
 		{
 			byte[] timeRemainingBytes = BitConverter.GetBytes(im.powerups[i].powerupTimeRemaining);
@@ -337,9 +346,11 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		index += 4;
 		
 		ushort numberOfPowerupsLoaded = BitConverter.ToUInt16(dataLoaded, index);
+		Debug.Log ("numberOfPowerupsLoaded: " + numberOfPowerupsLoaded);
 		index += 2;
 		for(int i=0; i < numberOfPowerupsLoaded; i++)
 		{
+			Debug.Log ("i: " + i);
 			im.powerups[i].powerupTimeRemaining = BitConverter.ToSingle(dataLoaded, i*6 + index);
 			im.powerups[i].inventory = BitConverter.ToUInt16(dataLoaded, i*6 + 4 + index);
 			int numberOfPieces = im.powerups[i].pieces.Length;
