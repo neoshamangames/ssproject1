@@ -34,13 +34,14 @@ public class Stem : Object {
 	
 		line.drawEnd = (growth < segments - 1) ? low + 1 : segments - 1;
 		
+		Debug.Log ("stemming: " + stemming);
 		maxWidth = Mathf.Clamp(growth * stemming.widthGrowth, 1, plantWidth);
 		if (maxWidth > stemming.maxWidth)
 		{
 			maxWidth = stemming.maxWidth;
 			state = State.Grown;
-			state = State.Grown;
 			UpdateWidth();
+			line.Draw3D();
 		}
 		
 		this.rightSide = rightSide;
@@ -101,6 +102,7 @@ public class Stem : Object {
 		{
 			maxWidth = stemming.maxWidth;
 			state = State.Grown;
+			Debug.Log ("stem fully grown");
 		}
 		UpdateWidth();
 	}

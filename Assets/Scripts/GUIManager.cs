@@ -11,6 +11,8 @@ public class GUIManager : MonoBehaviour {
 	public Texture muteButton;
 	public Texture unmuteButton;
 	public Texture frame;
+	public Color activeMenuButtonTint;
+	public Color scoreColor;
 	public bool updateValuesInPlayMode = true;
 	[Range(0, 1)]public float iconSizePercent = .2f;
 	[Range(0, 1)]public float menuButtonSizePercent = .2f;
@@ -31,6 +33,8 @@ public class GUIManager : MonoBehaviour {
 	[Range(-1, 1)]public float powerUpLabelYPercent = 0;
 	[Range(0, 1)]public float textButtonXPercent = .5f;
 	[Range(-1, 1)]public float textButtonYPercent = .5f;
+	[Range(-1, 1)]public float scoreXPercent = .5f;
+	[Range(-1, 1)]public float scoreYPercent = .5f;
 	public float fontSizeInverse = 20f;
 	#endregion
 	
@@ -47,11 +51,19 @@ public class GUIManager : MonoBehaviour {
 		height = Screen.height;
 		centerX = width / 2;
 		centerY = height / 2;
+		
 		labelStyle = new GUIStyle();
 		labelStyle.font = font;
 		labelStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
 		labelStyle.normal.textColor = Color.white;
 		labelStyle.alignment = TextAnchor.MiddleCenter;
+		
+		
+		scoreStyle = new GUIStyle();
+		scoreStyle.font = font;
+		scoreStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
+		scoreStyle.normal.textColor = scoreColor;
+		scoreStyle.alignment = TextAnchor.MiddleRight;
 		
 		multiplierStyle = new GUIStyle();
 		multiplierStyle.font = font;
@@ -77,12 +89,12 @@ public class GUIManager : MonoBehaviour {
 			CalculateValues();
 		#endif
 		
-		if (GUI.Button(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton, buttonStyle))
-		{
-			menuOpen = !menuOpen;
-		}
+		
 		if (menuOpen)
 		{
+			GUI.color = activeMenuButtonTint;
+			DrawMenuButton();
+			GUI.color = Color.white;
 			GUI.DrawTexture(new Rect(centerX - frameWidth / 2, 0, frameWidth, height), frame, ScaleMode.ScaleToFit);
 			DrawPowerUpGUI(im.powerups[0], powerup1Y);
 			DrawPowerUpGUI(im.powerups[1], powerup2Y);
@@ -96,6 +108,10 @@ public class GUIManager : MonoBehaviour {
 			}
 			
 		}
+		else
+		{
+			DrawMenuButton();
+		}
 		
 		if (plant.state == Plant.PlantState.Dead)
 		{
@@ -105,6 +121,8 @@ public class GUIManager : MonoBehaviour {
 				cm.Reset();
 			}
 		}
+		
+		GUI.Button(new Rect(scoreX, scoreY, 200, 50), Mathf.RoundToInt(plant.Height).ToString(), scoreStyle);
 	}
 	#endregion
 	
@@ -116,7 +134,7 @@ public class GUIManager : MonoBehaviour {
 	private float height, width;
 	private float centerX, centerY;
 	private bool menuOpen;
-	private GUIStyle buttonStyle, labelStyle, multiplierStyle;
+	private GUIStyle buttonStyle, labelStyle, multiplierStyle, scoreStyle;
 	private float frameWidth;
 	private int iconSize;
 	private float iconX, iconMultiplierX, iconMultiplierYOffset;
@@ -130,7 +148,14 @@ public class GUIManager : MonoBehaviour {
 	private float menuButtonSize, muteButtonSize;
 	private float menuButtonX, menuButtonY;
 	private float muteButtonX, muteButtonY;
+	private float scoreX, scoreY;
 	private bool muted;
+	
+	private void DrawMenuButton()
+	{
+		if (GUI.Button(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton, buttonStyle))
+			menuOpen = !menuOpen;
+	}
 	
 	private void CalculateValues()
 	{
@@ -184,20 +209,30 @@ public class GUIManager : MonoBehaviour {
 		textButton1X = centerX + textButtonXPercent * frameWidth - 50;
 		textButton2X = centerX - textButtonXPercent * frameWidth - 50;
 		textButtonY = centerY + textButtonYPercent * frameWidth;
+		
+		scoreX = width * scoreXPercent;
+		scoreY = height * scoreYPercent;
 	}
 	
 	private void DrawPowerUpGUI(ItemManager.Prize prize, float yCoordinate)
 	{
 		GUI.Label(new Rect(powerUpLabelX, yCoordinate + powerUpLabelY, 100, 50), prize.name, labelStyle);
 		int prizeInv = prize.inventory;
+		
 		if (prizeInv > 0)
+		{
 			if (prizeInv > 1)
 			{
-				GUI.DrawTexture(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.multipleTexture);
+				if (GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.multipleTexture, buttonStyle))
+					im.Activate(prize);
 				GUI.Label(new Rect(iconMultiplierX, yCoordinate + iconMultiplierYOffset, iconSize, iconSize), prizeInv.ToString(), multiplierStyle);
 			}
 			else
-				GUI.DrawTexture(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.texture);
+			{
+				if (GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.texture, buttonStyle))
+					im.Activate(prize);
+			}
+		}
 			
 		else
 			GUI.DrawTexture(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.offTexture);
@@ -208,7 +243,6 @@ public class GUIManager : MonoBehaviour {
 			ItemManager.Piece piece = prize.pieces[i];
 			if (inventory > 0)
 			{
-//				GUI.DrawTexture(new Rect(iconX, yCoordinate, iconSize, iconSize), piece.texture);
 				GUI.DrawTexture(new Rect(pieceX[i], yCoordinate + pieceYOffset[i], iconSize, iconSize), piece.texture);
 				if (inventory > 1)
 					GUI.Label(new Rect(multiplierX[i], yCoordinate + multiplierYOffset, 100, 50), String.Format("x{0}", inventory), multiplierStyle);

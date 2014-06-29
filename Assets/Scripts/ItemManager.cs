@@ -167,6 +167,15 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				collectables.Add(prize);
 			}
 		}
+		
+		for(int i=0; i < powerups.Count; i++)
+		{
+			if (powerups[i].name  == REVIVE_NAME)
+				{
+					reviveIndex = i;
+					break;
+				}
+		}
 	}
 	
 	void Update()
@@ -232,11 +241,35 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			}
 			selection -= selectedPrizes[i].rarity;
 		}
+	}
+	
+	public void Activate(Prize prize)
+	{
+		if (plant.state == Plant.PlantState.Dead)
+		{
+			if (prize.name == REVIVE_NAME)
+			{
+				OnRevive();
+				prize.inventory--;
+			}
+		
+		}
+		else
+		{
+			if (prize.name != REVIVE_NAME)
+			{
+				prize.powerupValue = prize.powerupMultiplier;
+				prize.powerupTimeRemaining += prize.powerupActiveTime;
+				prize.inventory--;
+			}
+		}
 		
 	}
 	#endregion
 	
-	#region Private	
+	#region Private
+	private const string REVIVE_NAME = "Revive Plant";
+	private int reviveIndex;
 	private DataManager dm;
 	private float powerupRarirtyTotal = 0;
 	private float collectableRarirtyTotal = 0;
@@ -284,21 +317,6 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		default:
 			return (plant.state != Plant.PlantState.Dead);
 		}
-	}
-	
-	private void Activate(Prize prize)
-	{
-		switch (prize.name)
-		{
-		case "revive":
-			OnRevive();
-			break;
-		default:
-			prize.powerupValue = prize.powerupMultiplier;
-			prize.powerupTimeRemaining += prize.powerupActiveTime;
-			break;
-		}
-		prize.inventory--;
 	}
 	#endregion
 }

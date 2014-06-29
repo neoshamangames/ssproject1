@@ -34,7 +34,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	#region Actions
 	public void Reset()
 	{
-		SetCameraY(0);
+		SetCameraY(initialCameraY);
 	}
 	#endregion
 
@@ -50,6 +50,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		vectorCam.farClipPlane = 1000;
 		width = Screen.width;
 		plantDistanceFromCam = plant.transform.position.z - transform.position.z;
+		initialCameraY = transform.position.y;
 	}
 	
 	void Start()
@@ -175,13 +176,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	}
 	#endregion
 	
-	#region Actions
-	public void ZoomOut()
-	{
-	
-	}
-	#endregion
-	
 	#region Private
 	private const int CLOUD_LAYER = 9;
 	private LayerMask notCloudLayer = ~(1 << CLOUD_LAYER);
@@ -201,6 +195,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private float scrollMomentum, scrollDirection;
 	private DataManager dm;
 	private float lastTouchTimer, doubleTapTimer;
+	private float initialCameraY;
 	
 //	private float max =0;//temp
 	

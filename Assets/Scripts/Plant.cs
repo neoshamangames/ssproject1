@@ -262,9 +262,7 @@ public class Plant : MonoBehaviour {
 		stemParent.name = "stems";
 		lineParent.name = "lines";
 		
-		Initialize();
-		
-		TestLine();
+		Initialize();		
 	}
 
 	void Update()
@@ -584,6 +582,9 @@ public class Plant : MonoBehaviour {
 			UpdateWidth();
 			if (dm.stemLengthsLoaded.Count > 0)
 				LoadStems();
+			finishPoint = lines[lines.Count - 1].points3[lastSegments[lines.Count - 1]];
+			Debug.Log ("lines loaded. finishPoint: " + finishPoint);
+			
 		}
 		else
 		{
@@ -597,10 +598,9 @@ public class Plant : MonoBehaviour {
 			state = PlantState.VeryHealthy;
 			growthFactor = 1;
 			saturation = OPTIMUM_SATURATION;
+			lowPoint = lines[0].points3[0];
+			highPoint = lines[0].points3[2];
 		}		
-		
-		lowPoint = lines[0].points3[0];
-		highPoint = lines[0].points3[2];	
 	}
 	
 	private void Revive()
@@ -624,7 +624,7 @@ public class Plant : MonoBehaviour {
 		int numberOfCurves = dm.curvePointsLoaded.Count;
 		while(curveLoadIndex < numberOfCurves)
 			NewLine(false, true, loadedColor);
-		if (numberOfCurves > 2)
+		if (lines.Count > 2)
 		{
 			float maxWidth = appearance.maxWidth;
 			for(int i=0; i<lines.Count-2; i++)
@@ -637,6 +637,7 @@ public class Plant : MonoBehaviour {
 		}
 	}
 	
+	/*
 	private void TestLine()
 	{
 		Color lineColor = appearance.veryHealthyColor;
@@ -684,6 +685,7 @@ public class Plant : MonoBehaviour {
 			}
 		}
 	}
+	*/
 	
 	private void NewLine(bool firstLine, bool loadCurves=false, Color? loadedColor = null)
 	{
@@ -729,6 +731,8 @@ public class Plant : MonoBehaviour {
 				lineIndex = lines.Count;
 				lastSegment = lastSegments[lines.Count];
 				line.drawEnd = Mathf.CeilToInt(height) - currentLineBaseHeight;
+				lowPoint = line.points3[line.drawEnd - 1];
+				highPoint = line.points3[line.drawEnd];
 			}
 			else
 			{
@@ -745,6 +749,7 @@ public class Plant : MonoBehaviour {
 		}
 		
 		Debug.Log ("creating line " + lines.Count + " segments: " + lastSegments[lines.Count] + " curves: " + curves);
+		Debug.Log ("first point: " + line.points3[0]);
 		lines.Add(line);
 	}
 	
@@ -774,6 +779,7 @@ public class Plant : MonoBehaviour {
 	
 	private void AddBezierCurve(int index, VectorLine line)
 	{
+		Debug.Log ("adding curve. startPoint: " + startPoint);
 		startPoint = finishPoint;
 		curvePoints[0] = startPoint;
 		float angle;
@@ -811,12 +817,14 @@ public class Plant : MonoBehaviour {
 		curvePoints[3].z = depth;
 		int segments = Mathf.RoundToInt(growth.segmentsPerScreen * bezierCurveHeight);
 		line.MakeCurve (curvePoints, segments, lastSegments[index]);
+		/*
 		Debug.Log ("segments: " + segments);
 		Debug.Log("new curve startPoint : " + startPoint);
 		Debug.Log("curvePoints[0] : " + curvePoints[0]);
 		Debug.Log("new curve finishPoint : " + finishPoint);
 		Debug.Log("curvePoints[0] : " + curvePoints[3]);
 		Debug.Log("first point: " + line.points3[lastSegments[index]]);
+		*/
 		
 				
 		#if UNITY_EDITOR
@@ -950,6 +958,7 @@ public class Plant : MonoBehaviour {
 		{
 			if (lineIndex > 0)//width growth spans more than 1 line
 			{
+//				Debug.Log ("setting widthsPrev");
 				widthsPrev = new float[lines[lineIndex - 1].points3.Length - 1];
 				int lastSegment = lastSegments[lineIndex - 1];
 				start = lastSegment + low;
@@ -1118,8 +1127,8 @@ public class Plant : MonoBehaviour {
 				int stemLineIndex = stem.lineIndex;
 				float plantWidth = (stemLineIndex == lineIndex) ?  widths[stemLineIndex] : (stemLineIndex == lineIndex - 1) ? widthsPrev[stemLineIndex] : appearance.maxWidth;
 				stem.Grow(newGrowth, plantWidth);
+				stem.line.Draw3D();
 			}
-			stem.line.Draw3D();
 			if (stem.flower.state != Flower.FlowerState.Fruited)
 				stem.flower.Grow(newGrowth);
 		}
@@ -1194,6 +1203,7 @@ public class Plant : MonoBehaviour {
 					break;
 				case 1:
 					l = lineIndex - 1;
+					Debug.Log("lineIndex: " + lineIndex + ", widthsPrev: " + widthsPrev );
 					plantWidth = widthsPrev[h];
 					break;
 				case 2:

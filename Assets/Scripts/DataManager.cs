@@ -346,11 +346,9 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		index += 4;
 		
 		ushort numberOfPowerupsLoaded = BitConverter.ToUInt16(dataLoaded, index);
-		Debug.Log ("numberOfPowerupsLoaded: " + numberOfPowerupsLoaded);
 		index += 2;
 		for(int i=0; i < numberOfPowerupsLoaded; i++)
 		{
-			Debug.Log ("i: " + i);
 			im.powerups[i].powerupTimeRemaining = BitConverter.ToSingle(dataLoaded, i*6 + index);
 			im.powerups[i].inventory = BitConverter.ToUInt16(dataLoaded, i*6 + 4 + index);
 			int numberOfPieces = im.powerups[i].pieces.Length;
