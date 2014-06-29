@@ -42,18 +42,14 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	void Awake() {
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
-		VectorLine.SetCamera3D(mainCam);
+//		VectorLine.SetCamera3D(mainCam);
 		vectorCam = VectorLine.SetCamera(cloudCam);
 		vectorCam.orthographic = true;
 		vectorCam.transform.position = cloudCam.transform.position;
-//		vectorCam.transform.localScale = mainCam.transform.localScale;
-//		vectorCam.orthographicSize = mainCam.orthographicSize;
-//		vectorCam.fieldOfView = mainCam.fieldOfView;
 		vectorCam.nearClipPlane = 1;
 		vectorCam.farClipPlane = 1000;
 		width = Screen.width;
 		plantDistanceFromCam = plant.transform.position.z - transform.position.z;
-		Debug.Log("plantDistanceFromCam: " + plantDistanceFromCam);
 	}
 	
 	void Start()
@@ -70,6 +66,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
 		float plantY = plant.TopPosisiton.y;
 		bool inScrollRange = false;
+		doubleTapTimer += Time.deltaTime;
 		if (plantY > topEdge)
 		{
 			lastTouchTimer += Time.deltaTime;
@@ -83,7 +80,8 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			if (inScrollRange)
 			{
 				float scrollDelta = prevPlantY - plantY;
-				MoveCamera(new Vector3(0, -scrollDelta, 0));
+				if (scrollDelta < 0)
+					MoveCamera(new Vector3(0, -scrollDelta, 0));
 //				SetCameraY(plantY);
 //				max = plantY;
 			}
@@ -202,7 +200,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private float prevPlantY;
 	private float scrollMomentum, scrollDirection;
 	private DataManager dm;
-	private float lastTouchTimer;
+	private float lastTouchTimer, doubleTapTimer;
 	
 //	private float max =0;//temp
 	
@@ -223,13 +221,16 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 				flowerTouched = collider;
 		}
 		
-		if (lastTouchTimer < doubleTapTimeout  && scrollMomentum == 0)
+		if (doubleTapTimer < doubleTapTimeout  && scrollMomentum == 0)
+		{
 			ProcessDoubleTap();
+		}
 	}
 	
 	private void ProcessTouch(Vector2 coordinates)
 	{
 		lastTouchTimer = 0;
+		doubleTapTimer = 0;
 		Ray ray = cloudCam.ScreenPointToRay(coordinates);
 		RaycastHit hit;
 		if (touchBeganOnCloud)
@@ -242,10 +243,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			if (prevCoordsSet)
 			{
 				Vector3 initialPos = mainCam.ScreenToWorldPoint(new Vector3(prevCoords.x, prevCoords.y, plantDistanceFromCam));
-//				Debug.Log("initialPos: " + initialPos);
 				Vector3 newPos = mainCam.ScreenToWorldPoint(new Vector3(coordinates.x, coordinates.y, plantDistanceFromCam)); 
-//				Debug.Log("newPos: " + newPos);
-				MoveCamera(initialPos - newPos);
+				Vector3 deltaPos = initialPos - newPos;
+				if (initialPos != newPos)
+					MoveCamera(deltaPos);
 			}
 			prevCoords = coordinates;
 			prevCoordsSet = true;
@@ -316,7 +317,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	void MoveCamera(Vector3 movement)
 	{
-//		Debug.Log("Move cam: " + movement);
 		mainCam.transform.position += movement;
 		Vector3 basePos = mainCam.WorldToViewportPoint(plant.BasePosisiton);
 		Vector3 topPos = mainCam.WorldToViewportPoint(plant.TopPosisiton);

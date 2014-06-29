@@ -37,13 +37,10 @@ public class Stem : Object {
 		maxWidth = Mathf.Clamp(growth * stemming.widthGrowth, 1, plantWidth);
 		if (maxWidth > stemming.maxWidth)
 		{
-			Debug.Log ("loading full grown stem");
 			maxWidth = stemming.maxWidth;
 			state = State.Grown;
 			state = State.Grown;
 			UpdateWidth();
-			Debug.Log ("> lineIndex: " + lineIndex + ", height: " + height);
-			
 		}
 		
 		this.rightSide = rightSide;

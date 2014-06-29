@@ -43,7 +43,7 @@ public class Plant : MonoBehaviour {
 	
 	[System.Serializable]
 	public class GrowthAttributes {
-		[Range(0, 10)] public float maxGrowthPerSecond = 1f;
+		[Range(0, 20)] public float maxGrowthPerSecond = 1f;
 		[Range(5, 1000)]public int segmentsPerScreen = 500;
 		[Range(0,1)]public float healthyGrowthFactor = .5f;
 		[Range(0,1)]public float unHealthyGrowthFactor = .25f;
@@ -263,6 +263,8 @@ public class Plant : MonoBehaviour {
 		lineParent.name = "lines";
 		
 		Initialize();
+		
+		TestLine();
 	}
 
 	void Update()
@@ -534,12 +536,16 @@ public class Plant : MonoBehaviour {
 	private float stemFallingFadeTime;
 	private int stemCount;
 	
+	//test
+	VectorLine test;
+	
 	//appearanece
 	private float stateTransitionSeconds;
 	
 	private void Initialize(bool reset = false)
 	{
 		height = 0;
+		currentLineBaseHeight = 0;
 		endSegment = 1;
 		
 		startPoint.x = transform.position.x;
@@ -627,6 +633,54 @@ public class Plant : MonoBehaviour {
 				for(int n=0; n<widths.Length; n++)
 					widths[n] = maxWidth;
 				lines[i].SetWidths(widths);
+			}
+		}
+	}
+	
+	private void TestLine()
+	{
+		Color lineColor = appearance.veryHealthyColor;
+		test =  new VectorLine ("TestLine", new Vector3[POINTS_PER_LINE], lineColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
+		Vector3[] points = new Vector3[4];
+		Vector3 startPointTest =  new Vector3(0f, 100.6f, -5f);
+		points[0] = startPointTest;
+		//		Debug.Log ("flipControlPoint: " + flipControlPoint);
+		//		Debug.Log ("angle 1: " + angle);
+		//		Debug.Log ("controlLength 1: " + controlLength / screenHeight);
+		float length1 = Random.Range (bezier.minControlLength, bezier.maxControlLength) * HEIGHT_MULTIPLIER;
+		float angle = Random.Range (bezier.minAngle, bezier.maxAngle);
+		
+		Vector3 controlPointOffset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad) * length1, Mathf.Sin(angle * Mathf.Deg2Rad) * length1, depth);
+		//		Debug.Log ("controlPointOffset 1 : " + controlPointOffset);
+		points [1].x = startPointTest.x + controlPointOffset.x * (true ? 1 : -1);
+		points [1].y = startPointTest.y + controlPointOffset.y;
+		points[1].z = depth;
+		float bezierCurveHeight =  Random.Range(bezier.minCurveHeight, bezier.maxCurveHeight);
+		Vector3 finishPointTest = new Vector3(startPointTest.x, startPointTest.y + bezierCurveHeight * HEIGHT_MULTIPLIER, depth);
+		points[2] = finishPointTest;
+		angle = Random.Range (bezier.minAngle, bezier.maxAngle);
+		float length2 = Random.Range (bezier.minControlLength, bezier.maxControlLength) * HEIGHT_MULTIPLIER;
+		controlPointOffset = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad) * length2, Mathf.Sin(angle * Mathf.Deg2Rad) * length2, depth);
+		points[3].x = finishPointTest.x + controlPointOffset.x * (true ? 1 : -1);
+		points[3].y = finishPointTest.y - controlPointOffset.y;
+		points[3].z = depth;
+		int segments = Mathf.RoundToInt(growth.segmentsPerScreen * bezierCurveHeight);
+		test.drawEnd = segments;
+		test.MakeCurve (points, segments, 0);
+		test.Draw3D();
+		
+		if (drawDebugMarks)
+		{
+			controlLine1.points3 = new Vector3[] {startPointTest, new Vector3(points [1].x, points [1].y, depth)};
+			controlLine2.points3 = new Vector3[] {finishPointTest, new Vector3(points [3].x, points [3].y, depth)};
+			controlLine1.Draw3D();
+			controlLine2.Draw3D();
+		}
+		if (drawPoints)
+		{
+			for(int i=0; i < segments; i++)
+			{
+				Instantiate(pointMarker, test.points3[i], transform.rotation);
 			}
 		}
 	}
@@ -757,8 +811,14 @@ public class Plant : MonoBehaviour {
 		curvePoints[3].z = depth;
 		int segments = Mathf.RoundToInt(growth.segmentsPerScreen * bezierCurveHeight);
 		line.MakeCurve (curvePoints, segments, lastSegments[index]);
-		//glowLine.points3 = line.points3;
+		Debug.Log ("segments: " + segments);
+		Debug.Log("new curve startPoint : " + startPoint);
+		Debug.Log("curvePoints[0] : " + curvePoints[0]);
+		Debug.Log("new curve finishPoint : " + finishPoint);
+		Debug.Log("curvePoints[0] : " + curvePoints[3]);
+		Debug.Log("first point: " + line.points3[lastSegments[index]]);
 		
+				
 		#if UNITY_EDITOR
 		if (drawDebugMarks)
 		{
@@ -793,7 +853,6 @@ public class Plant : MonoBehaviour {
 
 	private void TransitionState(PlantState newState)
 	{
-		Debug.Log ("transition state: " + newState);
 		if (state != newState)
 		{
 			state = newState;
@@ -1170,7 +1229,7 @@ public class Plant : MonoBehaviour {
 				}
 			}
 			
-			Debug.Log ("new stem. l: " + l);
+			Debug.Log ("new stem. l: " + l + "h: " + h);
 			Vector3 point = lines[l].points3[h];
 			point.z += STEM_DEPTH;
 			curve[0] = point;

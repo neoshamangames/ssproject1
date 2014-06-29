@@ -1,0 +1,9 @@
+Library
+Builds
+Temp
+Obj
+*.csproj
+.user
+*.userprefs
+*.sln
+*.DS_store
