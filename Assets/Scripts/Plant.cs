@@ -123,7 +123,9 @@ public class Plant : MonoBehaviour {
 	#region Properties
 	public Vector3 TopPosisiton
 	{
-		get { return lines[lineIndex].points3[lines[lineIndex].drawEnd]; }
+		get {
+			return lines[lineIndex].points3[lines[lineIndex].drawEnd];
+		}
 	}
 	
 	public Vector3 BasePosisiton
@@ -141,17 +143,16 @@ public class Plant : MonoBehaviour {
 		get { return saturation; }
 	}
 	
-	public byte[] StemLineFlags
+	public int[] StemLineIndices
 	{
 		get
 		{
-			byte[] flags = new byte[stemCount];
+			int[] indices = new int[stemCount];
 			for(int i=0; i<stemCount; i++)
 			{
-				int stemLineIndex = stems[i].lineIndex;
-				flags[i] = (stemLineIndex == lineIndex) ?  (byte)0 : (stemLineIndex == lineIndex - 1) ? (byte)1 : (byte)2;
+				indices[i] = stems[i].lineIndex;
 			}
-			return flags;
+			return indices;
 		}
 	}
 	
@@ -196,6 +197,21 @@ public class Plant : MonoBehaviour {
 	{
 		get { return stemDeathTime - unhealthyTimer; }
 	}
+	
+	public bool LastControlPointFlipped
+	{
+		get { return lastControlPointFlipped; }
+	}
+	
+	public float ControlLength
+	{
+		get { return controlLength2; }
+	}
+	
+	public float ControlAngle
+	{
+		get { return lastAngle; }
+	}
 	#endregion
 	
 	#region Actions
@@ -211,6 +227,8 @@ public class Plant : MonoBehaviour {
 		ItemManager.OnRevive += Revive;
 		im = ItemManager.Instance;
 		dm = DataManager.Instance;
+		stateTime = Time.time;
+		stemBirthTimes = new List<float>();
 	}
 	
 	void Start()
@@ -262,7 +280,7 @@ public class Plant : MonoBehaviour {
 		stemParent.name = "stems";
 		lineParent.name = "lines";
 		
-		Initialize();		
+		Initialize();
 	}
 
 	void Update()
@@ -270,6 +288,7 @@ public class Plant : MonoBehaviour {
 		//	Debug.Log ("saturation: " + saturation);
 		float deltaTime = Time.deltaTime;
 		if (state != PlantState.Dead)
+//		if (true)
 		{
 			height += deltaTime * growth.maxGrowthPerSecond * growthFactor * im.GrowMultiplier;
 			int intPart = Mathf.FloorToInt(height) - currentLineBaseHeight;
@@ -432,6 +451,18 @@ public class Plant : MonoBehaviour {
 		dm.SaveData();
 	}
 	
+	void OnApplicationPause(bool pause)
+	{
+		if (pause)
+		{
+			dm.SaveData();
+		}
+		else
+		{
+			//TODO: trigger "while you were away here
+		}
+	}
+	
 	void OnDestroy()
 	{
 		ItemManager.OnRevive -= Revive;
@@ -442,6 +473,14 @@ public class Plant : MonoBehaviour {
 	public void Water(float percentOfCloud)
 	{
 		saturation += percentOfCloud * growth.waterPerCloud;
+	}
+	#endregion
+	
+	#region Handlers
+	private void Revive(ItemManager.Prize prize)
+	{
+		saturation = OPTIMUM_SATURATION;
+		TransitionState(PlantState.VeryHealthy);
 	}
 	#endregion
 
@@ -480,6 +519,7 @@ public class Plant : MonoBehaviour {
 	private Vector3 highPoint;
 	
 	//bezier curve
+	private bool flipControlPoint;
 	private VectorLine controlLine1;
 	private VectorLine controlLine2;
 	private float controlLength = -1;
@@ -496,7 +536,6 @@ public class Plant : MonoBehaviour {
 	private float drownedThreshold;
 	private float witheringThreshold;
 	private float witheredThreshold;
-	private Color loadedColor;
 	
 	//color transition
 	private bool transitioning;
@@ -533,6 +572,16 @@ public class Plant : MonoBehaviour {
 	private GameObject stemParent, lineParent;
 	private float stemFallingFadeTime;
 	private int stemCount;
+	private float stateTime;
+	
+	//catchup
+	private const int NEXT_STEM_HEIGHT_MAX = 20;
+	private float catchupGrowth;
+	private float drowningSeconds, witheringSeconds = 0;
+	private float witheringStartTime = -1f;
+	List<float> stemBirthTimes;
+	List<float> newStemsBirthTimes;
+	List<int> nextStemHeights;
 	
 	//test
 	VectorLine test;
@@ -565,6 +614,8 @@ public class Plant : MonoBehaviour {
 		nextStemHeight = stemming.startingPlantHeight;
 		stemSide = (Random.Range(0, 2) == 0);
 		stems = new List<Stem>();
+		ResetStemDeath();
+		
 		stemCount = 0;
 		if (reset)
 		{
@@ -577,14 +628,17 @@ public class Plant : MonoBehaviour {
 		}
 		if(!reset && dm.curvePointsLoaded.Count > 0)
 		{
-			LoadState();
 			LoadCurves();
+			finishPoint = lines[lines.Count - 1].points3[lastSegments[lines.Count - 1]];
+			
+			InitializeValuesFromFile();
+			
+			Catchup();
+			PopulateWidthsPrevious();
 			UpdateWidth();
 			if (dm.stemLengthsLoaded.Count > 0)
 				LoadStems();
-			finishPoint = lines[lines.Count - 1].points3[lastSegments[lines.Count - 1]];
-			Debug.Log ("lines loaded. finishPoint: " + finishPoint);
-			
+			CatchupStems();
 		}
 		else
 		{
@@ -600,13 +654,338 @@ public class Plant : MonoBehaviour {
 			saturation = OPTIMUM_SATURATION;
 			lowPoint = lines[0].points3[0];
 			highPoint = lines[0].points3[2];
-		}		
+		}
+		
 	}
 	
-	private void Revive()
+	private void InitializeValuesFromFile()
 	{
-		saturation = OPTIMUM_SATURATION;
-		TransitionState(PlantState.VeryHealthy);
+		lastControlPointFlipped = dm.lastControlPointFlippedLoaded;
+		controlLength2 = dm.controlLengthLoaded;
+		lastAngle = dm.controlAngleLoaded;
+		nextStemHeight = dm.stemNextHeightLoaded;
+		int numberOfStemsLoaded = dm.stemLengthsLoaded.Count;
+		if (numberOfStemsLoaded > 0)
+			stemSide = (dm.stemCurvePointsLoaded[(numberOfStemsLoaded - 1)*4].x - dm.stemCurvePointsLoaded[(numberOfStemsLoaded - 1)*4 + 2].x) > 0;
+	}
+	
+	private void Catchup()
+	{
+		if (state == PlantState.Dead)
+			return;
+
+//		float secondsToAdvance = dm.secondsSinceSave;
+		//TODO: use anti-cheat plugin
+		float secondsToAdvance = 40;
+		AdvancePlant(secondsToAdvance);
+	}
+	
+	private void AdvancePlant(float seconds)
+	{
+		
+		saturation = dm.saturationLoaded;
+		FindState();
+		
+		nextStemHeights = new List<int>();
+		newStemsBirthTimes = new List<float>();
+		int nextStemHeightToFind = nextStemHeight;
+		Debug.Log ("nextStemHeight: " + nextStemHeight);
+		
+		float newGrowth = 0;
+		float totalHeight = height;
+		float totalDry = 0;
+		float totalSeconds = 0;
+		float saturationToNextState = 0;
+		float saturationThisPeriod = 0;
+		float saturationRemaining = saturation;
+		float periodGrowthFactor = 0;
+		float secondsToNextState = 0;
+		float secondsToNextPeriod = 0;
+		float secondsRemaining = seconds;
+		float boostTimer = im.powerups[0].powerupTimeRemaining;
+		float slowTimer = im.powerups[1].powerupTimeRemaining;
+		float growMultiplier = (boostTimer > 0) ? im.powerups[0].powerupMultiplier : 1;
+		float dryMultiplier = (slowTimer > 0) ? im.powerups[1].powerupMultiplier : 1;
+		
+		PlantState periodState, nextState = state;
+		
+		Debug.Log ("boostTimer: " + boostTimer);
+		Debug.Log ("slowTimer: " + slowTimer);
+		
+		do
+		{
+			//the following statement do nothing the first iteration
+			newGrowth += periodGrowthFactor * secondsToNextPeriod;
+			
+			float newTotalHeight = newGrowth * growth.maxGrowthPerSecond + height;
+			
+			if (nextStemHeightToFind < newTotalHeight )
+			{
+				float heightAboveTotal = nextStemHeightToFind - totalHeight;
+				float secondsToGrowHeight = heightAboveTotal / growth.maxGrowthPerSecond / periodGrowthFactor;
+				float secondsSinceStart = totalSeconds + secondsToGrowHeight;
+				nextStemHeights.Add(nextStemHeightToFind);
+				newStemsBirthTimes.Add(secondsSinceStart);
+				Debug.Log("found nextStemHeightToFind: " + nextStemHeightToFind);
+				nextStemHeightToFind += Random.Range(stemming.minSeperation, stemming.maxSeperation);
+			}
+			
+			totalHeight = newTotalHeight;
+			totalSeconds += secondsToNextPeriod;	
+			periodState = nextState;
+			secondsRemaining -= secondsToNextPeriod;
+			saturationRemaining -= saturationThisPeriod;
+			totalDry += saturationThisPeriod;
+			
+			boostTimer -= secondsToNextPeriod;
+			slowTimer -= secondsToNextPeriod;
+			if (boostTimer <= 0)
+			{
+				Debug.Log ("boostTimer: " + boostTimer);
+				boostTimer = 0;
+				growMultiplier = 1;
+				im.powerups[0].powerupValue = 1;
+			}
+			if (slowTimer <= 0)
+			{
+				Debug.Log ("slowTimer: " + slowTimer);
+				slowTimer = 0;
+				dryMultiplier = 1;
+				im.powerups[1].powerupValue = 1;
+			}
+			
+		
+			switch (periodState)
+			{
+			case PlantState.Drowning:
+				saturationToNextState = saturationRemaining - drowningThreshold;
+				periodGrowthFactor = growth.unHealthyGrowthFactor;
+				nextState = PlantState.HealthyWet;
+				break; 
+				
+			case PlantState.HealthyWet:
+				saturationToNextState = saturationRemaining - healthyWetThreshold;
+				periodGrowthFactor = growth.healthyGrowthFactor;
+				nextState = PlantState.VeryHealthy;
+				break;
+				
+			case PlantState.VeryHealthy:
+				saturationToNextState = saturationRemaining - healthyDryThreshold;
+				periodGrowthFactor = 1;
+				nextState = PlantState.HealthyDry;
+				break;		
+				
+			case PlantState.HealthyDry:
+				saturationToNextState = saturationRemaining - witheringThreshold;
+				periodGrowthFactor = growth.healthyGrowthFactor;
+				nextState = PlantState.Withering;
+				break;
+				
+			case PlantState.Withering:
+				if (witheringStartTime == -1)
+					witheringStartTime = totalSeconds;
+				saturationToNextState = saturationRemaining - witheredThreshold;
+				periodGrowthFactor = growth.unHealthyGrowthFactor;
+				nextState = PlantState.Dead;
+				break;
+				
+			case PlantState.Dead:
+				secondsRemaining = 0;
+				break;
+			}
+			
+			secondsToNextState = saturationToNextState / growth.dryPerSecond / dryMultiplier;
+			periodGrowthFactor *= growMultiplier;
+			
+			float lowestTimer = Mathf.Min(boostTimer, slowTimer);
+			if (lowestTimer == 0 || secondsToNextState < lowestTimer)
+			{
+				secondsToNextPeriod = secondsToNextState;
+				saturationThisPeriod = saturationToNextState;
+			}
+			else
+			{
+				secondsToNextPeriod = lowestTimer;
+				nextState = periodState;
+				saturationThisPeriod = secondsToNextPeriod * growth.dryPerSecond * dryMultiplier;
+			}
+			
+			if (periodState == PlantState.Drowning)
+				drowningSeconds += Mathf.Min(secondsToNextPeriod, secondsRemaining);
+			else if (periodState == PlantState.Withering)
+				witheringSeconds += Mathf.Min(secondsToNextState, secondsRemaining);
+			
+				
+			Debug.Log ("secondsToNextPeriod: " + secondsToNextPeriod + ", saturationThisPeriod: " + saturationThisPeriod);
+			Debug.Log ("secondsToNextState: " + secondsToNextState + ", saturationRemaining: " + saturationRemaining + ", saturationToNextState: " + saturationToNextState);
+			Debug.Log ("periodState: " + periodState + ", periodGrowthFactor: " + periodGrowthFactor + ", secondsToNextState: " + secondsToNextState + ", secondsRemaining: " + secondsRemaining);
+		}
+		while (secondsToNextPeriod < secondsRemaining);
+				
+//		Debug.Log("newGrowth: " + newGrowth + ", periodGrowthFactor: " + periodGrowthFactor + ", secondsRemaining: " + secondsRemaining);
+		totalDry += secondsRemaining * growth.dryPerSecond * dryMultiplier;
+		newGrowth += periodGrowthFactor * secondsRemaining;
+		catchupGrowth = newGrowth;
+		float heightToAdd = newGrowth * growth.maxGrowthPerSecond;
+		Debug.Log("newGrowth total: " + newGrowth + ", heightToAdd: " + heightToAdd);
+
+		totalHeight = newGrowth * growth.maxGrowthPerSecond + height;
+		totalSeconds += secondsRemaining;
+		
+		boostTimer -= secondsRemaining;
+		slowTimer -= secondsRemaining;
+		
+		im.powerups[0].powerupTimeRemaining = Mathf.Max(0, boostTimer);
+		im.powerups[1].powerupTimeRemaining = Mathf.Max(0, slowTimer);
+		
+		while (nextStemHeightToFind < totalHeight )
+		{
+			float difference = totalHeight - nextStemHeightToFind;
+			float secondsToGrowDifference = difference / growth.maxGrowthPerSecond / periodGrowthFactor;
+			Debug.Log("found nextStemHeightToFind: " + nextStemHeightToFind);
+			Debug.Log ("secondsToGrowDifference: " + secondsToGrowDifference);
+			nextStemHeights.Add(nextStemHeightToFind);
+			newStemsBirthTimes.Add(seconds - secondsToGrowDifference);
+			nextStemHeightToFind += Random.Range(stemming.minSeperation, stemming.maxSeperation);
+		}
+
+		
+		AddHeight(heightToAdd);
+		saturation -= totalDry;
+		UpdateState();
+	}
+	
+	private void AddHeight(float heightToAdd)
+	{
+		float newHeight = height + heightToAdd;
+		int intPart = Mathf.FloorToInt(newHeight) - currentLineBaseHeight;
+		int totalSegments = lastSegments[lineIndex];
+		while (intPart > totalSegments)
+		{
+			Debug.Log("adding new line in AddHeight");
+			currentLineBaseHeight += lastSegment;
+			NewLine(false);
+			lines[lineIndex].endCap = null;
+			lines[lineIndex].drawEnd = lastSegments[lineIndex];
+			Debug.Log ("lineIndex: " + lineIndex + ", drawEnd: " + lines[lineIndex].drawEnd);
+			lineIndex++;
+			lastSegment = lastSegments[lineIndex];
+			totalSegments += lastSegment;
+			
+		}
+		lines[lineIndex].drawEnd = Mathf.FloorToInt(newHeight) - currentLineBaseHeight;
+		height = newHeight;
+	}
+	
+	private void CatchupStems()
+	{
+	
+		float stemGrowth = catchupGrowth * stemming.maxGrowthPerSecond;
+		
+		foreach(Stem stem in stems)
+		{
+			int stemLineIndex = stem.lineIndex;
+			int stemHeight = stem.height;
+			float plantWidth = (stemLineIndex == lineIndex) ?  widths[stemHeight] : (stemLineIndex == lineIndex - 1) ? widthsPrev[stemHeight] : appearance.maxWidth;
+			Debug.Log ("lineIndex: " + stemLineIndex + ", height: " + stem.height + ", stemGrowth: " + stemGrowth);
+			
+			stem.CatchupGrowth(stemGrowth, plantWidth);
+			stem.line.Draw3D();
+				
+			stem.flower.CatchupGrowth(stemGrowth);
+			
+			stemBirthTimes.Add(0);
+		}
+		
+		for(int i=0; i<nextStemHeights.Count(); i++)
+		{
+			nextStemHeight = nextStemHeights[i];
+			Debug.Log ("adding stem in at height: " + nextStemHeight);
+			NewStem();
+			
+			Stem stem = stems.Last();
+			int stemLineIndex = stem.lineIndex;
+			int stemHeight = stem.height;
+			float plantWidth = (stemLineIndex == lineIndex) ?  widths[stemHeight] : (stemLineIndex == lineIndex - 1) ? widthsPrev[stemHeight] : appearance.maxWidth;
+			float growthSince = GetGrowthSinceHeight(stemLineIndex, stem.height) * stemming.maxGrowthPerSecond;
+			
+			stem.CatchupGrowth(growthSince, plantWidth);
+			stem.line.Draw3D();
+				
+			stem.flower.CatchupGrowth(growthSince);
+			
+			nextStemHeight += Random.Range(stemming.minSeperation, stemming.maxSeperation); //for last iteration
+			stemSide = !stemSide;
+			
+			stemBirthTimes.Add(newStemsBirthTimes[i]);
+		}
+
+		for(int i=0; i < stemBirthTimes.Count; i++)
+		{
+			Debug.Log("i: " + i + ", stemBirthTimes[i]: " + stemBirthTimes[i]);
+		}
+		
+		if (drowningSeconds > 0)
+		{
+			float timeSinceStart = 0;
+			while (drowningSeconds > stemDeathTime)
+			{
+				Debug.Log ("drowningSeconds: " + drowningSeconds + ", stemDeathTime: " + stemDeathTime);
+				drowningSeconds -= stemDeathTime;
+				timeSinceStart += stemDeathTime;
+				stemDeathTime = Random.Range(stemming.minDeathTime, stemming.maxDeathTime);
+				RemoveStemThatWasAliveAtTime(timeSinceStart);
+			}
+			if (state == PlantState.Drowning)
+				unhealthyTimer = drowningSeconds;
+		}
+		else if (witheringSeconds > 0)
+		{
+			float timeSinceStart = witheringStartTime;
+			while (witheringSeconds > stemDeathTime)
+			{
+				Debug.Log ("witheringSeconds: " + witheringSeconds + ", stemDeathTime: " + stemDeathTime);
+				witheringSeconds -= stemDeathTime;
+				timeSinceStart += stemDeathTime;
+				stemDeathTime = Random.Range(stemming.minDeathTime, stemming.maxDeathTime);
+				RemoveStemThatWasAliveAtTime(timeSinceStart);
+			}
+			if (state == PlantState.Drowning)
+				unhealthyTimer = witheringSeconds;
+		}
+		
+		Debug.Log ("unhealthyTimer: " + unhealthyTimer + ", stemDeathTime: " + stemDeathTime);
+	}
+	
+	private void RemoveStemThatWasAliveAtTime(float secondsAfterSave)
+	{
+		if (stemCount == 0)
+			return;
+			
+		Debug.Log ("RemoveStemThatWasAliveAtTime: " + secondsAfterSave);
+		List<Stem> aliveStems = new List<Stem>();
+		for(int i=0; i < stemCount; i++)
+			if (stemBirthTimes[i] < secondsAfterSave)
+				aliveStems.Add(stems[i]);
+		
+		int removeIndex = Random.Range(0, aliveStems.Count());
+		Debug.Log ("removing stem: " + removeIndex);
+		VectorLine.Destroy(ref stems[removeIndex].line);
+		stems.RemoveAt(removeIndex);
+		stemCount--;
+		dm.RemoveStem(removeIndex);
+		
+	}
+	
+	private float GetGrowthSinceHeight(int l, int h)
+	{
+		int segmentsFromTop = -h;
+		for(int i = l; i <= lineIndex; i++)
+		{
+			segmentsFromTop += lines[i].drawEnd;
+		}
+//		Debug.Log ("GetGrowthSinceHeight i: " + i + ", h: " + h);
+		return segmentsFromTop / growth.maxGrowthPerSecond;
 	}
 
 	private void AddCurve(int index, VectorLine line)
@@ -620,10 +999,13 @@ public class Plant : MonoBehaviour {
 	private void LoadCurves()
 	{
 		height = dm.heightLoaded;
-		NewLine(true, true, loadedColor);
+		if (height == 0)
+			height = 1;
+		NewLine(true, true);
 		int numberOfCurves = dm.curvePointsLoaded.Count;
+		Debug.Log ("numberOfCurves: " + numberOfCurves);
 		while(curveLoadIndex < numberOfCurves)
-			NewLine(false, true, loadedColor);
+			NewLine(false, true);
 		if (lines.Count > 2)
 		{
 			float maxWidth = appearance.maxWidth;
@@ -687,9 +1069,11 @@ public class Plant : MonoBehaviour {
 	}
 	*/
 	
-	private void NewLine(bool firstLine, bool loadCurves=false, Color? loadedColor = null)
+	private void NewLine(bool firstLine, bool loadCurves=false)
 	{
-		Color lineColor = loadCurves ? (Color)loadedColor : firstLine ? appearance.veryHealthyColor : lines[0].color;
+	
+		Debug.Log ("NewLine(firstLine: " + firstLine + ", loadCurves: " + loadCurves + ", lines.Count: " + lines.Count);
+		Color lineColor = firstLine ? appearance.veryHealthyColor : lines[0].color;
 		VectorLine line =  new VectorLine ("Plant " + lines.Count, new Vector3[POINTS_PER_LINE], lineColor, appearance.normalMaterial, appearance.minWidth, LineType.Continuous, Joins.Weld);
 		line.vectorObject.transform.parent = lineParent.transform;
 		line.smoothWidth = true;
@@ -730,8 +1114,9 @@ public class Plant : MonoBehaviour {
 				line.endCap = "Point";
 				lineIndex = lines.Count;
 				lastSegment = lastSegments[lines.Count];
+				Debug.Log ("height: " + height + ", currentLineBaseHeight: " + currentLineBaseHeight + ", drawEnd: " + line.drawEnd);
 				line.drawEnd = Mathf.CeilToInt(height) - currentLineBaseHeight;
-				lowPoint = line.points3[line.drawEnd - 1];
+				lowPoint = line.points3[line.drawEnd - 1];//TODO: check if it is possible for this to be < 0
 				highPoint = line.points3[line.drawEnd];
 			}
 			else
@@ -748,8 +1133,7 @@ public class Plant : MonoBehaviour {
 			line.drawEnd = firstLine ? endSegment : 0;
 		}
 		
-		Debug.Log ("creating line " + lines.Count + " segments: " + lastSegments[lines.Count] + " curves: " + curves);
-		Debug.Log ("first point: " + line.points3[0]);
+//		Debug.Log ("creating line " + lines.Count + " segments: " + lastSegments[lines.Count] + " curves: " + curves);
 		lines.Add(line);
 	}
 	
@@ -779,15 +1163,15 @@ public class Plant : MonoBehaviour {
 	
 	private void AddBezierCurve(int index, VectorLine line)
 	{
-		Debug.Log ("adding curve. startPoint: " + startPoint);
 		startPoint = finishPoint;
 		curvePoints[0] = startPoint;
 		float angle;
-		bool flipControlPoint;
-		if (controlLength == -1) {
-			angle = Random.Range (bezier.minAngle, bezier.maxAngle);
+		if (controlLength == -1 && dm.curvePointsLoaded.Count == 0)
+		{
+			Debug.Log ("random flipControlPoint and controlLength");
 			flipControlPoint = (Random.Range(0, 2) == 0);
 			controlLength = Random.Range (bezier.minControlLength, bezier.maxControlLength) * HEIGHT_MULTIPLIER;
+			angle = Random.Range (bezier.minAngle, bezier.maxAngle);					
 		} else {
 			controlLength = controlLength2;
 			angle = lastAngle;
@@ -863,6 +1247,7 @@ public class Plant : MonoBehaviour {
 	{
 		if (state != newState)
 		{
+			stateTime = Time.time;
 			state = newState;
 			/*
 			if (state == PlantState.VeryHealthy)
@@ -909,12 +1294,23 @@ public class Plant : MonoBehaviour {
 		stemDeathTime = Random.Range(stemming.minDeathTime, stemming.maxDeathTime);
 	}
 	
+	private IEnumerator WaitAndSetPlantColor(Color color)
+	{
+		yield return null;
+		SetPlantColor(color);
+	}
+	
 	private void SetPlantColor(Color color)
 	{
-		
 		foreach(VectorLine line in lines)
 		{
-			line.SetColor(color);
+			try{
+				line.SetColor(color);
+			}
+			catch
+			{
+				Debug.LogWarning ("color not set");
+			}
 		}
 		foreach(Stem stem in stems)
 		{
@@ -942,7 +1338,7 @@ public class Plant : MonoBehaviour {
 		glowTransitioning = true;
 		glowTransitionTimer = 0;
 	}
-
+	
 	private void UpdateWidth()
 	{
 		float maxWidth = appearance.maxWidth;
@@ -958,10 +1354,9 @@ public class Plant : MonoBehaviour {
 		{
 			if (lineIndex > 0)//width growth spans more than 1 line
 			{
-//				Debug.Log ("setting widthsPrev");
 				widthsPrev = new float[lines[lineIndex - 1].points3.Length - 1];
-				int lastSegment = lastSegments[lineIndex - 1];
-				start = lastSegment + low;
+				int thislastSegment = lastSegments[lineIndex - 1];
+				start = thislastSegment + low;
 				if (start < 0)
 				{
 					Debug.LogError("appearance.widthSegments is too high!");
@@ -973,7 +1368,7 @@ public class Plant : MonoBehaviour {
 					widthsPrev[i] = maxWidth;
 				}
 				float count = 0;
-				for(int i = start; i < lastSegment; i++)
+				for(int i = start; i < thislastSegment; i++)
 				{
 					float t = count/widthSegments;
 					widthsPrev[i] = Mathf.Lerp(appearance.maxWidth, appearance.minWidth, t);
@@ -1004,10 +1399,22 @@ public class Plant : MonoBehaviour {
 		//glowLine.SetWidths(glowWidths);
 	}
 	
-	private void LoadState()
+	private void PopulateWidthsPrevious()
 	{
-		saturation = dm.saturationLoaded;
-		
+		if (lineIndex > 0)
+		{
+			widthsPrev = new float[lines[lineIndex - 1].points3.Length - 1];
+			float maxWidth = appearance.maxWidth;
+			int lastSegment = lastSegments[lineIndex - 1];
+			for(int i = 0; i < lastSegment; i++)
+			{
+				widthsPrev[i] = maxWidth;
+			}
+		}
+	}
+	
+	private void FindState()
+	{
 		if (saturation <=  witheredThreshold)
 			state = PlantState.Dead;
 		else  if (saturation <=  witheringThreshold)
@@ -1022,32 +1429,41 @@ public class Plant : MonoBehaviour {
 			state = PlantState.Drowning;
 		else
 			state = PlantState.Dead;
-			
+	}
+	
+	private void UpdateState()
+	{
+		Color plantColor = appearance.veryHealthyColor;
+		
+		FindState();
+		
 		switch (state)
 		{
 		case PlantState.Dead:
-			loadedColor = appearance.deadColor;
+			plantColor = appearance.deadColor;
 			growthFactor = 0;
 			break;
 		case PlantState.Drowning:
-			loadedColor = appearance.drowningColor;
+			plantColor = appearance.drowningColor;
 			growthFactor = growth.unHealthyGrowthFactor;
 			break; 
 		case PlantState.Withering:
-			loadedColor = appearance.witheringColor;
+			plantColor = appearance.witheringColor;
 			growthFactor = growth.unHealthyGrowthFactor;
 			break;
 		case PlantState.HealthyDry:
 		case PlantState.HealthyWet:
-			loadedColor = appearance.healthyColor;
+			plantColor = appearance.healthyColor;
 			growthFactor = growth.healthyGrowthFactor;
 			break;
 		case PlantState.VeryHealthy:
-			loadedColor = appearance.veryHealthyColor;
+			plantColor = appearance.veryHealthyColor;
 			growthFactor = 1;
 			break;
 		}
 		
+		StartCoroutine(WaitAndSetPlantColor(plantColor));
+//		SetPlantColor(plantColor);
 	}
 	
 	private void UpdateSaturation()
@@ -1097,7 +1513,7 @@ public class Plant : MonoBehaviour {
 				}
 				if (saturation < witheringThreshold)
 				{
-					TransitionState(PlantState.Withering);	
+					TransitionState(PlantState.Withering);
 				}
 				break;
 			
@@ -1118,6 +1534,19 @@ public class Plant : MonoBehaviour {
 	
 	private void UpdateStems()
 	{
+		GrowStems();
+		
+		if (height > nextStemHeight)
+		{
+			Debug.Log ("height: " + height + ", nextStemHeight: " + nextStemHeight);
+			NewStem();
+			nextStemHeight += Random.Range(stemming.minSeperation, stemming.maxSeperation);
+			stemSide = !stemSide;
+		}
+	}
+	
+	private void GrowStems()
+	{
 		float newGrowth = Time.deltaTime * stemming.maxGrowthPerSecond * growthFactor * im.GrowMultiplier;
 		
 		foreach(Stem stem in stems)
@@ -1125,19 +1554,13 @@ public class Plant : MonoBehaviour {
 			if (stem.state == Stem.State.Growing)
 			{
 				int stemLineIndex = stem.lineIndex;
-				float plantWidth = (stemLineIndex == lineIndex) ?  widths[stemLineIndex] : (stemLineIndex == lineIndex - 1) ? widthsPrev[stemLineIndex] : appearance.maxWidth;
+				int stemHeight = stem.height;
+				float plantWidth = (stemLineIndex == lineIndex) ?  widths[stemHeight] : (stemLineIndex == lineIndex - 1) ? widthsPrev[stemHeight] : appearance.maxWidth;
 				stem.Grow(newGrowth, plantWidth);
 				stem.line.Draw3D();
 			}
 			if (stem.flower.state != Flower.FlowerState.Fruited)
 				stem.flower.Grow(newGrowth);
-		}
-		
-		if (height > nextStemHeight)
-		{
-			NewStem();
-			nextStemHeight += Random.Range(stemming.minSeperation, stemming.maxSeperation);
-			stemSide = !stemSide;
 		}
 	}
 	
@@ -1154,26 +1577,25 @@ public class Plant : MonoBehaviour {
 	private void LoadStems()
 	{
 		int numberOfStemsLoaded = dm.stemLengthsLoaded.Count;
-		nextStemHeight = dm.stemNextHeightLoaded;
 		for(int i=0; i<numberOfStemsLoaded; i++)
 		{
 			Vector3[] curve = {dm.stemCurvePointsLoaded[i*4], dm.stemCurvePointsLoaded[i*4 + 1], dm.stemCurvePointsLoaded[i*4 + 2], dm.stemCurvePointsLoaded[i*4 + 3]};
-			NewStem(curve, dm.stemLengthsLoaded[i], dm.stemLineFlagsLoaded[i], dm.stemHeightsLoaded[i]);
+			NewStem(curve, dm.stemLengthsLoaded[i], dm.stemLineIndicesLoaded[i], dm.stemHeightsLoaded[i]);
 			stems.Last().flower.LoadGrowthState(dm.flowerGrowthStatesLoaded[i]);
 		}
-		
-		stemSide = (dm.stemCurvePointsLoaded[(numberOfStemsLoaded - 1)*4].x - dm.stemCurvePointsLoaded[(numberOfStemsLoaded - 1)*4 + 2].x) > 0;
-		
+				
 		if(state == PlantState.Withering || state == PlantState.Drowning)
+		{
 			stemDeathTime = dm.timeUntilStemDeathLoaded;
+			Debug.Log ("stemDeathTime loaded: " + stemDeathTime);
+		}
 			
 		if (state == PlantState.Dead)
-			UpdateStems();
-			
+			GrowStems();
 	}
 
-	private void NewStem(Vector3[] curveLoaded=null, float growthLoaded=0, byte flagLoaded = 0, ushort heightLoaded=0)
-	{		
+	private void NewStem(Vector3[] curveLoaded=null, float growthLoaded=0, int indexLoaded = 0, ushort heightLoaded=0)
+	{
 		int h = 0;
 		int l = 0;
 		float plantWidth = appearance.minWidth;
@@ -1195,23 +1617,22 @@ public class Plant : MonoBehaviour {
 			for(int i=0; i<4; i++)
 				curve[i].z = depth;
 			h = heightLoaded;
-			switch (flagLoaded)
+			
+			if (indexLoaded == lineIndex)
 			{
-				case 0:
-					l = lineIndex;
-					plantWidth = widths[h];
-					break;
-				case 1:
-					l = lineIndex - 1;
-					Debug.Log("lineIndex: " + lineIndex + ", widthsPrev: " + widthsPrev );
-					plantWidth = widthsPrev[h];
-					break;
-				case 2:
-					l = -1;
-					plantWidth = appearance.maxWidth;
-					break;
+				plantWidth = widths[h];
 			}
-			Debug.Log("l: " + l + ", h: " + h + ", plantWidth: " + plantWidth );
+			else if (indexLoaded == lineIndex - 1)
+			{
+//				Debug.Log("lineIndex: " + lineIndex + ", widthsPrev: " + widthsPrev );
+				plantWidth = widthsPrev[h];
+			}
+			else
+			{
+				plantWidth = appearance.maxWidth;
+			}
+			
+			l = indexLoaded;
 		}
 		else
 		{
@@ -1225,21 +1646,25 @@ public class Plant : MonoBehaviour {
 			{
 				l = lineIndex;
 				h = nextStemHeight - currentLineBaseHeight;
+//				Debug.Log ("if nextStemHeight: " + nextStemHeight + ", currentLineBaseHeight: " + currentLineBaseHeight);
 			}
 			else
 			{
-				for(int i=0; i<lineIndex; i++)
+//				Debug.Log ("else nextStemHeight: " + nextStemHeight + ", currentLineBaseHeight: " + currentLineBaseHeight);
+				int lineHeightTotal = 0;
+				for(int i=0; i <= lineIndex; i++)
 				{
-					h += lines[i].drawEnd;
-					if (nextStemHeight < h)
+					lineHeightTotal += lines[i].drawEnd;
+					if (nextStemHeight < lineHeightTotal)
 					{
 						l = i;
+						h = nextStemHeight - lineHeightTotal + lines[i].drawEnd;	//add drawEnd back to get the base height of the line
 						break;
 					}
 				}
 			}
 			
-			Debug.Log ("new stem. l: " + l + "h: " + h);
+			Debug.Log("l: " + l + ", h: " + h + ", plantWidth: " + plantWidth + ", drawEnd: " + lines[l].drawEnd);
 			Vector3 point = lines[l].points3[h];
 			point.z += STEM_DEPTH;
 			curve[0] = point;

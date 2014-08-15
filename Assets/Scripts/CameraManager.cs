@@ -310,7 +310,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		SetCameraY(plantY);
 	}
 	
-	void MoveCamera(Vector3 movement)
+	private void MoveCamera(Vector3 movement)
 	{
 		mainCam.transform.position += movement;
 		Vector3 basePos = mainCam.WorldToViewportPoint(plant.BasePosisiton);
@@ -324,7 +324,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		CalculateEdges();
 	}
 	
-	void SetCameraY(float y)
+	private void SetCameraY(float y)
 	{
 		Vector3 pos = mainCam.transform.position;
 		pos.y = y;
@@ -339,7 +339,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		CalculateEdges();
 	}
 	
-	void CalculateEdges()
+	private void CalculateEdges()
 	{
 		scrollEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, scrollEdgePercent, plantDistanceFromCam)).y;
 		topEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, 1, plantDistanceFromCam)).y;

@@ -1,8 +1,18 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using Soomla.Store;
 
 public class GUIManager : MonoBehaviour {
+
+	[System.Serializable]
+	public class StoreItem
+	{
+		public Texture texture;
+		public string itemName;
+		public string priceText;
+	}
 	
 	#region Attributes
 	public Plant plant;
@@ -29,13 +39,34 @@ public class GUIManager : MonoBehaviour {
 	[Range(-1, 1)]public float piecesFinishX = .25f;
 	[Range(-1, 1)]public float piecesStartX = .05f;
 	[Range(-1, 1)]public float multiplierXPercent = .5f;
+	[Range(-1, 1)]public float multiplierYPercent = .75f;
 	[Range(0, 1)]public float powerUpLabelXPercent = 0;
 	[Range(-1, 1)]public float powerUpLabelYPercent = 0;
 	[Range(0, 1)]public float textButtonXPercent = .5f;
 	[Range(-1, 1)]public float textButtonYPercent = .5f;
-	[Range(-1, 1)]public float scoreXPercent = .5f;
-	[Range(-1, 1)]public float scoreYPercent = .5f;
+	[Range(0, 1)]public float scoreXPercent = .5f;
+	[Range(0, 1)]public float scoreYPercent = .5f;
 	public float fontSizeInverse = 20f;
+	public StoreItem[] storeItems;
+	[Range(0, 1)]public float storeItemSizePercent = .2f;
+	[Range(0, 1)]public float storeStartY = .2f;
+	[Range(0, 1)]public float storeFinishY = .8f;
+	[Range(0, 1)]public float storeItemXPercent = .25f;
+	[Range(0, 1)]public float storePriceXPercent = .25f;
+	[Range(-1, 1)]public float storePriceYPercent = 0;
+	[Range(0, 1)]public float storeNameXPercent = .25f;
+	[Range(-1, 1)]public float storeNameYPercent = 0;
+	[Multiline]public string creditsText;
+	[Range(0, 1)]public float creditsXPercent = .5f;
+	[Range(0, 1)]public float creditsYPercent = .5f;
+	[Range(0, 1)]public float powerupTime1XPercent = .5f;
+	[Range(0, 1)]public float powerupTime2XPercent = .5f;
+	[Range(-.1f, 1)]public float powerupTimeYPercent = .5f;
+	[Range(0, 1)]public float powerupTimeSizePercent = .2f;
+	[Range(-1, 1)]public float poweruptTimeLabelXPercent = 0;
+	[Range(-1, 1)]public float poweruptTimeLabelYPercent = 0;
+	[Range(0,255)]public byte activePowerupTransparency = 100;
+	
 	#endregion
 	
 	#region Unity
@@ -44,6 +75,12 @@ public class GUIManager : MonoBehaviour {
 		im = ItemManager.Instance;
 		am = AudioManager.Instance;
 		cm = GetComponent<CameraManager>();
+		
+		ItemManager.OnPowerupActivated += OnPowerupActivated;
+		
+		powerup1 = im.prizes[0];
+		powerup2 = im.prizes[1];
+		powerup1Name = powerup1.name;
 		
 		muted = am.Muted;
 		
@@ -56,29 +93,74 @@ public class GUIManager : MonoBehaviour {
 		labelStyle.font = font;
 		labelStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
 		labelStyle.normal.textColor = Color.white;
-		labelStyle.alignment = TextAnchor.MiddleCenter;
+		labelStyle.alignment = TextAnchor.UpperLeft;
 		
+		creditsStyle = new GUIStyle();
+		creditsStyle.font = font;
+		creditsStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
+		creditsStyle.normal.textColor = Color.white;
+		creditsStyle.alignment = TextAnchor.UpperCenter;
 		
 		scoreStyle = new GUIStyle();
 		scoreStyle.font = font;
 		scoreStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
 		scoreStyle.normal.textColor = scoreColor;
-		scoreStyle.alignment = TextAnchor.MiddleRight;
+		scoreStyle.alignment = TextAnchor.UpperLeft;
 		
 		multiplierStyle = new GUIStyle();
 		multiplierStyle.font = font;
 		multiplierStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
 		multiplierStyle.normal.textColor = Color.white;
-		multiplierStyle.alignment = TextAnchor.MiddleLeft;
+		multiplierStyle.alignment = TextAnchor.UpperCenter;
 		
 		buttonStyle = new GUIStyle();
 		buttonStyle.font = font;
 		buttonStyle.normal.textColor = Color.white;
 		buttonStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
-		buttonStyle.alignment = TextAnchor.MiddleCenter;
+		buttonStyle.alignment = TextAnchor.UpperCenter;
 		buttonStyle.border = new RectOffset(0, 0, 0, 0);
+		buttonStyle.stretchWidth = true;
+		buttonStyle.stretchHeight = true;
+		buttonStyle.fixedHeight = 0;
+		buttonStyle.fixedWidth = 0;
+		
+		numberOfStoreItems = storeItems.Length;
+		productIDs = new string[] {Constants.REVIVE_3_PACK_ID, Constants.REVIVE_5_PACK_ID, Constants.REVIVE_10_PACK_ID, Constants.REVIVE_15_PACK_ID};
+		storeItemY = new float[numberOfStoreItems];
+		storePriceY = new float[numberOfStoreItems];
+		storeNameY = new float[numberOfStoreItems];
+		PVIs = new List<PurchasableVirtualItem>();
+		itemPrices = new List<string>();
+		itemNames = new List<string>();
 		
 		CalculateValues();
+	}
+	
+	void Start()
+	{
+		List<VirtualGood> virtualGoods = StoreInfo.GetVirtualGoods();
+		
+//		foreach(VirtualGood virtualGood in virtualGoods)
+//		{
+//			Debug.Log ("virtualGood.Name: " + virtualGood.Name + ", virtualGood.ItemId: " + virtualGood.ItemId + ", virtualGood.ID: " + virtualGood.ID);
+//		}
+		
+		for(int i=0; i<numberOfStoreItems; i++)
+		{
+			PurchasableVirtualItem pvi = StoreInfo.GetItemByItemId(productIDs[i]) as PurchasableVirtualItem;
+			if (pvi != null)
+			{
+				MarketItem marketItem = (pvi.PurchaseType as PurchaseWithMarket).MarketItem;
+				itemPrices.Add(String.Format("${0:0.00}", marketItem.Price));
+//				Debug.Log ("itemPrices[i]: " + itemPrices[i]);
+			}
+			else
+			{
+//				Debug.Log ("can't access store database in Editor. Using placeholder values.");
+				itemPrices.Add(storeItems[i].priceText);
+			}
+			itemNames.Add(storeItems[i].itemName);
+		}
 	}
 	
 	void OnGUI()
@@ -89,24 +171,54 @@ public class GUIManager : MonoBehaviour {
 			CalculateValues();
 		#endif
 		
-		
 		if (menuOpen)
 		{
+		
 			GUI.color = activeMenuButtonTint;
 			DrawMenuButton();
 			GUI.color = Color.white;
 			GUI.DrawTexture(new Rect(centerX - frameWidth / 2, 0, frameWidth, height), frame, ScaleMode.ScaleToFit);
-			DrawPowerUpGUI(im.powerups[0], powerup1Y);
-			DrawPowerUpGUI(im.powerups[1], powerup2Y);
-			DrawPowerUpGUI(im.powerups[2], powerup3Y);
-			GUI.Button(new Rect(textButton1X, textButtonY, 100, 50), "SHOP", buttonStyle);
-			GUI.Button(new Rect(textButton2X, textButtonY, 100, 50), "CREDITS", buttonStyle);
-			if (GUI.Button(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), muted ? unmuteButton : muteButton, buttonStyle))
+			
+			switch (menuState)
+			{
+			case MenuState.POWERUPS:
+				
+				DrawPowerUpGUI(im.powerups[0], powerup1Y);
+				DrawPowerUpGUI(im.powerups[1], powerup2Y);
+				DrawPowerUpGUI(im.powerups[2], powerup3Y);
+				
+				DrawCreditsButton();
+				DrawShopButton();
+				
+				break;
+								
+			case MenuState.CREDITS:
+				DrawCredits();
+				DrawBackButton(textButton2X);
+				DrawShopButton();
+				break;
+				
+			case MenuState.SHOP:
+			
+				DrawCreditsButton();
+				DrawBackButton(textButton1X);
+				
+				for(int i=0; i<numberOfStoreItems; i++)
+				{
+					DrawStoreItem(i);
+				}
+				
+				break;
+			
+			}
+			
+			
+			if (GUIButtonTexture(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), muted ? unmuteButton : muteButton))
+//			if (GUI.Button(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), muted ? unmuteButton : muteButton, buttonStyle))
 			{
 				muted = !muted;
 				am.ToggleMute();
-			}
-			
+			}	
 		}
 		else
 		{
@@ -115,26 +227,50 @@ public class GUIManager : MonoBehaviour {
 		
 		if (plant.state == Plant.PlantState.Dead)
 		{
-			if (GUI.Button(new Rect(5, 5, 100, 50), "Reset Plant", buttonStyle))//temp
+			if (GUI.Button(new Rect(centerX, 15, 100, 50), "Reset Plant", buttonStyle))//temp
 			{
 				plant.Reset();
 				cm.Reset();
 			}
 		}
 		
-		GUI.Button(new Rect(scoreX, scoreY, 200, 50), Mathf.RoundToInt(plant.Height).ToString(), scoreStyle);
+		GUI.Label(new Rect(scoreX, scoreY, 200, 50), Mathf.RoundToInt(plant.Height).ToString(), scoreStyle);
+		
+		if (powerup1Active)
+			DrawActivePowerup(powerup1, powerupTime1X);
+		if (powerup2Active)
+			DrawActivePowerup(powerup2, powerupTime2X);
+	}
+	
+	void OnDestroy()
+	{
+		ItemManager.OnPowerupActivated -= OnPowerupActivated;
+	}
+	#endregion
+	
+	#region Handlers
+	private void OnPowerupActivated(ItemManager.Prize powerup)
+	{
+		if (powerup.name == powerup1Name)
+			powerup1Active = true;
+		else
+			powerup2Active = true;
+		
 	}
 	#endregion
 	
 	#region Private
-	private const float MULTIPLIER_Y_OFFSET_PERCENT = .75f;
+	private enum MenuState {POWERUPS, CREDITS, SHOP};
+	private const int SECONDS_PER_HOUR = 3600;
+	private const int SECONDS_PER_MINUTE = 60;
 	private ItemManager im;
 	private CameraManager cm;
 	private AudioManager am;
+	private MenuState menuState = MenuState.POWERUPS;
 	private float height, width;
 	private float centerX, centerY;
 	private bool menuOpen;
-	private GUIStyle buttonStyle, labelStyle, multiplierStyle, scoreStyle;
+	private GUIStyle buttonStyle, labelStyle, creditsStyle, multiplierStyle, scoreStyle;
 	private float frameWidth;
 	private int iconSize;
 	private float iconX, iconMultiplierX, iconMultiplierYOffset;
@@ -150,21 +286,34 @@ public class GUIManager : MonoBehaviour {
 	private float muteButtonX, muteButtonY;
 	private float scoreX, scoreY;
 	private bool muted;
+	private int numberOfStoreItems;
+	private string[] productIDs;
+	private float storeItemSize;
+	private float[] storeItemY, storePriceY, storeNameY;
+	private float storeItemX, storePriceX, storeNameX;
+	private List<PurchasableVirtualItem> PVIs;
+	private List<string> itemPrices;
+	private List<string> itemNames;
+	private float creditsX, creditsY;
+	private float powerupTime1X, powerupTime2X, powerupTimeY, powerupTimeSize;
+	private string powerup1Name;
+	private ItemManager.Prize powerup1, powerup2;
+	private bool powerup1Active, powerup2Active;
+	private float poweruptTimeLabelX, poweruptTimeLabelY;
 	
-	private void DrawMenuButton()
+	private bool GUIButtonTexture( Rect r, Texture t)
 	{
-		if (GUI.Button(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton, buttonStyle))
-			menuOpen = !menuOpen;
+		GUI.DrawTexture( r, t);
+		return GUI.Button( r, "", buttonStyle);
 	}
 	
 	private void CalculateValues()
 	{
 		frameWidth = width * frameWidthPercent;
-		iconX = centerX - frameWidth * iconXPercent;
-		iconMultiplierX = iconX + iconMultiplierXPercent * iconX;
-		iconMultiplierYOffset = iconMultiplierYPercent * iconX;
-		
-		iconSize = Mathf.RoundToInt(frameWidth * iconSizePercent);
+		iconX = centerX - frameWidth * iconXPercent;		
+		iconSize = Mathf.RoundToInt(width * iconSizePercent);
+		iconMultiplierX = iconX + iconMultiplierXPercent * iconSize;
+		iconMultiplierYOffset = iconMultiplierYPercent * iconSize;
 		
 		menuButtonSize = Mathf.RoundToInt(width * menuButtonSizePercent);
 		menuButtonX = buttonsIn * width - menuButtonSize / 2;
@@ -191,13 +340,13 @@ public class GUIManager : MonoBehaviour {
 		};
 		
 		multiplierX = new float[] {
-			pieceX[0] + iconSize * multiplierXPercent,
-			pieceX[1] + iconSize * multiplierXPercent,
-			pieceX[2] + iconSize * multiplierXPercent,
-			pieceX[3] + iconSize * multiplierXPercent
+			pieceX[0] + width * multiplierXPercent,
+			pieceX[1] + width * multiplierXPercent,
+			pieceX[2] + width * multiplierXPercent + iconSize/4,
+			pieceX[3] + width * multiplierXPercent + iconSize/4
 		};
 		
-		multiplierYOffset = iconSize * MULTIPLIER_Y_OFFSET_PERCENT;
+		multiplierYOffset = height * multiplierYPercent;
 		
 		powerup1Y = centerY + height * powerup1_YPercent;
 		powerup2Y = centerY + height * powerup2_YPercent;
@@ -210,8 +359,67 @@ public class GUIManager : MonoBehaviour {
 		textButton2X = centerX - textButtonXPercent * frameWidth - 50;
 		textButtonY = centerY + textButtonYPercent * frameWidth;
 		
-		scoreX = width * scoreXPercent;
+		scoreX = width - width * scoreXPercent;
 		scoreY = height * scoreYPercent;
+		
+		storeItemSize = Mathf.RoundToInt(width * storeItemSizePercent);
+		for(int i=0; i<numberOfStoreItems; i++)
+		{
+			storeItemY[i] = Mathf.Lerp(storeStartY, storeFinishY, (float)i/(float)(numberOfStoreItems - 1)) * height;
+			storePriceY[i] = storeItemY[i] + storePriceYPercent * height;
+			storeNameY[i] = storeItemY[i] + storeNameYPercent * height;
+		}
+		storeItemX = Mathf.RoundToInt(width * storeItemXPercent);
+		storePriceX = Mathf.RoundToInt(width * storePriceXPercent);
+		storeNameX = Mathf.RoundToInt(width * storeNameXPercent);
+		
+		creditsX = creditsXPercent * width;
+		creditsY = creditsYPercent * height;
+		
+		powerupTime1X = height * powerupTime1XPercent;
+		powerupTime2X = height * powerupTime2XPercent;
+		powerupTimeY= height * powerupTimeYPercent;
+		powerupTimeSize = Mathf.RoundToInt(width * powerupTimeSizePercent);
+		poweruptTimeLabelX = width *.2f * poweruptTimeLabelXPercent;
+		poweruptTimeLabelY = width *.2f * poweruptTimeLabelYPercent;
+		
+	}
+	
+	private void DrawMenuButton()
+	{
+//		if (GUI.Button(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSizeY), menuButton, buttonStyle))
+		if (GUIButtonTexture(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton))
+			menuOpen = !menuOpen;
+		
+
+//		GUI.DrawTexture(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton);
+	}
+	
+	private void DrawShopButton()
+	{
+		if (GUI.Button(new Rect(textButton1X, textButtonY, 100, 50), "SHOP", buttonStyle))
+		{
+			SoomlaStore.StartIabServiceInBg();
+			menuState = MenuState.SHOP;
+		}
+	}
+	
+	private void DrawCreditsButton()
+	{
+		if (GUI.Button(new Rect(textButton2X, textButtonY, 100, 50), "CREDITS", buttonStyle))
+		{
+			SoomlaStore.StopIabServiceInBg();
+			menuState = MenuState.CREDITS;
+		}
+	}
+	
+	private void DrawBackButton(float x)
+	{
+		if (GUI.Button(new Rect(x, textButtonY, 100, 50), "BACK", buttonStyle))
+		{
+			SoomlaStore.StopIabServiceInBg();
+			menuState = MenuState.POWERUPS;
+		}
 	}
 	
 	private void DrawPowerUpGUI(ItemManager.Prize prize, float yCoordinate)
@@ -223,19 +431,22 @@ public class GUIManager : MonoBehaviour {
 		{
 			if (prizeInv > 1)
 			{
-				if (GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.multipleTexture, buttonStyle))
+				if (GUIButtonTexture(new Rect(iconX, yCoordinate, iconSize, iconSize), prize.multipleTexture))
+//				if (GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.multipleTexture, buttonStyle))
 					im.Activate(prize);
 				GUI.Label(new Rect(iconMultiplierX, yCoordinate + iconMultiplierYOffset, iconSize, iconSize), prizeInv.ToString(), multiplierStyle);
 			}
 			else
 			{
-				if (GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.texture, buttonStyle))
+				if (GUIButtonTexture(new Rect(iconX, yCoordinate, iconSize, iconSize), prize.texture))
+//				if (GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.texture, buttonStyle))
 					im.Activate(prize);
 			}
 		}
 			
 		else
-			GUI.DrawTexture(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.offTexture);
+			GUI.DrawTexture(new Rect(iconX, yCoordinate, iconSize, iconSize), prize.offTexture);
+//			GUI.Button(new Rect(iconX, yCoordinate, iconSize, iconSize),  prize.offTexture, buttonStyle);
 		
 		for(int i=0; i<prize.pieces.Length; i++)
 		{
@@ -252,6 +463,56 @@ public class GUIManager : MonoBehaviour {
 				GUI.DrawTexture(new Rect(pieceX[i], yCoordinate + pieceYOffset[i], iconSize, iconSize), piece.offTexture);
 			}
 		}
+	}
+	
+	private void DrawActivePowerup(ItemManager.Prize powerup, float x)
+	{			
+		float timeRemaining = powerup.powerupTimeRemaining;
+		
+		
+		if (timeRemaining > 0)
+		{
+			GUI.color = new Color32(255, 255, 255, activePowerupTransparency);
+			GUI.DrawTexture(new Rect(x, powerupTimeY, powerupTimeSize, powerupTimeSize), powerup.activeTexture);
+			GUI.color = Color.white;
+			GUI.Label(new Rect(x + poweruptTimeLabelX, powerupTimeY + poweruptTimeLabelY, 500, 20), FormatTime(timeRemaining), labelStyle);
+		}
+		else
+		{
+			if (powerup.name == powerup1Name)
+				powerup1Active = false;
+			else
+				powerup2Active = false;
+		}
+	}
+	
+	private string FormatTime(float seconds)
+	{
+		string timeString;
+		if (seconds > SECONDS_PER_HOUR * 2)
+			timeString = String.Format("{0} hours", Mathf.FloorToInt(seconds/SECONDS_PER_HOUR));
+		else if (seconds > SECONDS_PER_MINUTE * 2)
+			timeString = String.Format("{0} minutes", Mathf.FloorToInt(seconds/SECONDS_PER_MINUTE));
+		else
+			timeString = String.Format("{0} seconds", Mathf.FloorToInt(seconds));
+		
+		return timeString;
+	}
+	
+	private void DrawStoreItem(int i)
+	{
+		if (GUIButtonTexture(new Rect(storeItemX, storeItemY[i], storeItemSize, storeItemSize), storeItems[i].texture))
+//		if (GUI.Button(new Rect(storeItemX, storeItemY[i], storeItemSize, storeItemSize), storeItems[i].texture, buttonStyle))
+		{
+			StoreInventory.BuyItem(productIDs[i]);
+		}
+		GUI.Label(new Rect(storePriceX, storePriceY[i], 100, 100), itemPrices[i], labelStyle);
+		GUI.Label(new Rect(storeNameX, storeNameY[i], 100, 100), itemNames[i], labelStyle);
+	}
+	
+	private void DrawCredits()
+	{
+		GUI.Label(new Rect(creditsX, creditsY, width, height), creditsText, creditsStyle);
 	}
 	#endregion
 }

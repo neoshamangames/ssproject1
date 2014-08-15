@@ -31,10 +31,16 @@ public class Stem : Object {
 		this.stemming = stemming;
 		maxWidth = this.lineWidth = lineWidth;
 		
-	
-		line.drawEnd = (growth < segments - 1) ? low + 1 : segments - 1;
+		if (growth < segments - 1)
+		{
+			line.drawEnd =  low + 1;
+		}
+		else
+		{
+			line.drawEnd = segments - 1;
+			lengthening = false;
+		}
 		
-		Debug.Log ("stemming: " + stemming);
 		maxWidth = Mathf.Clamp(growth * stemming.widthGrowth, 1, plantWidth);
 		if (maxWidth > stemming.maxWidth)
 		{
@@ -62,15 +68,36 @@ public class Stem : Object {
 	}
 	#endregion
 	
-	#region Actions	
-	public void Grow(float newGrowth, float plantWidth)
+	#region Actions
+	public bool CatchupGrowth(float newGrowth, float plantWidth)
+	{
+		int low = Mathf.FloorToInt(newGrowth);
+		lowPoint = line.points3[low];
+		highPoint = line.points3[low + 1];
+		
+		return Grow(newGrowth, plantWidth);
+	}
+	
+	
+	public bool Grow(float newGrowth, float plantWidth) //returns true when fully grown
 	{	
 		growth += newGrowth;
-		if (growth < segments - 1)
+		if (lengthening)
 		{
+//		if (growth < segments - 1)
+//		{		
 			int intPart = Mathf.FloorToInt(growth);
 			float decPart = growth % 1;
 			
+			if (growth >= segments - 1)
+			{
+				lengthening = false;
+				intPart = segments - 2;
+				int low = intPart;
+				lowPoint = line.points3[low];
+				highPoint = line.points3[low + 1];
+				decPart = 1;
+			}
 			
 			if (intPart >= endSegment)
 			{
@@ -98,13 +125,16 @@ public class Stem : Object {
 			flower.transform.rotation = Quaternion.Lerp(startRotation, finishRotation, decPart);
 		}
 		maxWidth = Mathf.Clamp(growth * stemming.widthGrowth, 1, plantWidth);
+		
 		if (maxWidth > stemming.maxWidth)
 		{
 			maxWidth = stemming.maxWidth;
 			state = State.Grown;
-			Debug.Log ("stem fully grown");
+			UpdateWidth();
+			return true;
 		}
 		UpdateWidth();
+		return false;
 	}
 	
 	public void SetFlowerPositonToEnd()
@@ -151,9 +181,11 @@ public class Stem : Object {
 	private float maxWidth;
 	private Vector3 direction, nextDirection;
 	private float prevSign;
+	private bool lengthening = true;
 	
 	private void UpdateWidth()
 	{
+	
 		widths = new float[line.points3.Length - 1];
 		
 		int max = line.drawEnd;

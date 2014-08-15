@@ -20,6 +20,8 @@ public class Flower : MonoBehaviour {
 			{
 			case FlowerState.PreBloom:
 				val = growthCounter - nextFlowerDelay;//should be negative
+				Debug.Log ("growthCounter: " + growthCounter + ", nextFlowerDelay: " + nextFlowerDelay);
+				Debug.Log ("GrowthState PreBloom. val: " + val);
 				break;
 				
 			case FlowerState.Blooming:
@@ -45,11 +47,13 @@ public class Flower : MonoBehaviour {
 	{
 		sr = GetComponent<SpriteRenderer>();
 		im = ItemManager.Instance;
+		fruitedColor = Color.red;
 	}
 	
 	void Start()
 	{
-		nextFlowerDelay = stemming.flowerDelay;
+		if (!flowerStateLoaded)
+			nextFlowerDelay = stemming.flowerDelay;
 	}
 	#endregion
 	
@@ -67,6 +71,8 @@ public class Flower : MonoBehaviour {
 		{
 			state = FlowerState.PreBloom;
 			nextFlowerDelay = -growthState;
+			flowerStateLoaded = true;
+			Debug.Log ("flowerStateLoaded nextFlowerDelay: " + nextFlowerDelay);
 		}
 		else
 		{
@@ -110,14 +116,14 @@ public class Flower : MonoBehaviour {
 				state = FlowerState.Fruited;
 			}
 			transitionTime += deltaTime;
-			sr.color = Color.Lerp(Color.white, Color.red, t);
+			sr.color = Color.Lerp(Color.white, fruitedColor, t);
 			//animation will play here
 			break;
 		case FlowerState.Fruited:
 			break;
 		case FlowerState.Harvested:
 			float t2 = transitionTime/stemming.harvestingTime;
-			sr.color = Color.Lerp(Color.red, Color.clear, t2);
+			sr.color = Color.Lerp(fruitedColor, Color.clear, t2);
 			if (transitionTime >= stemming.harvestingTime)
 			{
 				PrepareNextBud();
@@ -126,6 +132,36 @@ public class Flower : MonoBehaviour {
 			break;
 			
 		}
+	}
+	
+	public void CatchupGrowth(float newGrowth)
+	{
+		nextFlowerDelay = stemming.flowerDelay;
+		Debug.Log ("CatchupGrowth newGrowth: " + newGrowth + ", nextFlowerDelay: " + nextFlowerDelay + ", growthCounter: " + growthCounter);
+		
+		if (state == FlowerState.PreBloom)
+		{
+			float growthToBloom = nextFlowerDelay - growthCounter;
+			growthCounter += newGrowth;
+			if (growthCounter > nextFlowerDelay)
+			{
+				state = FlowerState.Blooming;
+				newGrowth -= growthToBloom;
+			}
+		}
+		if (state == FlowerState.Blooming)
+		{
+			float flowerGrowth = newGrowth * stemming.flowerGrowthFactor;
+			float scale = transform.localScale.x + flowerGrowth;
+			if (scale > stemming.maxFlowerSize)
+			{
+				scale = stemming.maxFlowerSize;
+				state = FlowerState.Fruited;
+				sr.color = fruitedColor;
+			}
+			transform.localScale = new Vector3(scale, scale, scale);
+		}
+			
 	}
 	
 	public void ProcessClick()
@@ -142,13 +178,16 @@ public class Flower : MonoBehaviour {
 	
 	#region Private
 	private SpriteRenderer sr;
+	private ItemManager im;
 	private float transitionTime = 0;
 	private float growthCounter = 0;
-	private float nextFlowerDelay;//TODO: remove this since it is superfluous. always == stemming.newFlowerDelay
-	private ItemManager im;
+	private float nextFlowerDelay;
+	private bool flowerStateLoaded;
+	private Color fruitedColor;
 	
 	private void PrepareNextBud()
 	{
+		Debug.Log ("PrepareNextBud()");
 		transitionTime = 0;
 		growthCounter = 0;
 		nextFlowerDelay = stemming.newFlowerDelay;

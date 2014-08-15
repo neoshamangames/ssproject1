@@ -15,12 +15,16 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	public List<Vector2> curvePointsLoaded;
 	public List<int> segmentsLoaded;
 	public int stemNextHeightLoaded;
-	public List<byte> stemLineFlagsLoaded;
+	public List<int> stemLineIndicesLoaded;
 	public List<ushort> stemHeightsLoaded;
 	public List<float> stemLengthsLoaded;
 	public List<Vector2> stemCurvePointsLoaded;
 	public List<float> flowerGrowthStatesLoaded;
 	public float timeUntilStemDeathLoaded;
+	public double secondsSinceSave;
+	public bool lastControlPointFlippedLoaded;
+	public float controlLengthLoaded;
+	public float controlAngleLoaded;
 	#endregion
 
 	#region Unity
@@ -34,7 +38,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		stemCurvePoints = new List<byte[]>();
 		collectablesToStore = new List<ushort>();
 		stemHeightsLoaded = new List<ushort>();
-		stemLineFlagsLoaded = new List<byte>();
+		stemLineIndicesLoaded = new List<int>();
 		data = new List<byte>();
 	}
 	
@@ -44,6 +48,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		{
 			Debug.Log("file exists. loading...");
 			LoadData();
+			CalculateTimeSinceSave();
 		}
 		else
 		{
@@ -61,6 +66,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		plantCurvePoints = new List<byte[]>();
 		stemCurvePoints = new List<byte[]>();
 		segments = new List<byte[]>();
+		curvePointsLoaded = new List<Vector2>();
 	}
 	
 	public void StoreCurve(Vector3[] curvePoints, ushort segment)
@@ -96,7 +102,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	
 	public void StoreCollectableIndex(ushort index)
 	{
-		Debug.Log ("storing collectable index: " + index);
 		collectablesToStore.Add(index);
 	}
 	
@@ -104,9 +109,11 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	{
 		data.Clear();
 		/*file version # (2 bytes)
-		cloud size
+		date/time stamp (8 bytes)
+		cloud size (4 bytes)
+		last control point flipped (1 byte), control length (4 bytes), control angle (4 bytes)
 		plant height (4 bytes), plant saturation (4 bytes), number of curves (2 bytes), curve segments (2 bytes each), curve control points (4 bytes each, 8 per curve),
-		stemHeight (4 bytes), number of stems (2 bytes), stem plant line flag: 0 = current line, 1 = previous line, 2 = lower (1 byte each)
+		stemHeight (4 bytes), number of stems (2 bytes), stem plant line index (4 bytes),
 		individual stem's height (2 bytes each), stem length(4 bytes each), stem control points (4 bytes each, 8 per curve)
 		flower growth state (4 bytes each, postive: flower size; negative: growth counter, 0: budded), time until stem death (4 bytes)
 		inventory: 		powerups-- number of powerups(2 bytes); for each powerup: time remaining (4 bytes), quanity (2 bytes), piece quanities (2 bytes each)
@@ -117,9 +124,26 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		data.Add(fileVersionBytes[0]);
 		data.Add(fileVersionBytes[1]);
 		
+		DateTime now = DateTime.UtcNow;
+		
+		byte[] ticks = BitConverter.GetBytes(now.Ticks);
+		for(int b=0; b<8; b++)
+			data.Add(ticks[b]);
+		
 		byte[] cloudSize = BitConverter.GetBytes(cloud.Size);
 		for(int b=0; b<4; b++)
 			data.Add(cloudSize[b]);
+			
+		byte[] lastControlPointFlippedBytes = BitConverter.GetBytes(plant.LastControlPointFlipped);
+		data.Add(lastControlPointFlippedBytes[0]);
+		
+		byte[] controlLengthBytes =  BitConverter.GetBytes(plant.ControlLength);
+		for(int b=0; b<4; b++)
+			data.Add(controlLengthBytes[b]);
+			
+		byte[] controlAngleBytes =  BitConverter.GetBytes(plant.ControlAngle);
+		for(int b=0; b<4; b++)
+			data.Add(controlAngleBytes[b]);
 		
 		byte[] heightBytes = BitConverter.GetBytes(plant.Height);
 		for(int b=0; b<4; b++)
@@ -129,7 +153,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		for(int b=0; b<4; b++)
 			data.Add(saturationBytes[b]);
 			
-		Debug.Log ("storing numberOfCurves as " + numberOfCurves);
 		byte[] numberOfCurvesBytes = BitConverter.GetBytes(numberOfCurves);
 		data.Add(numberOfCurvesBytes[0]);
 		data.Add(numberOfCurvesBytes[1]);
@@ -152,18 +175,19 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		
 		float[] stemLengths = plant.StemLengths;
 		uint numberOfStems = (uint)plant.StemLengths.Length;
-		Debug.Log ("storing numberOfStems as " + numberOfStems);
 		byte[] numberOfStemsBytes = BitConverter.GetBytes(numberOfStems);
 		
 		data.Add(numberOfStemsBytes[0]);
 		data.Add(numberOfStemsBytes[1]);
 		
-		byte[] stemLineFlags = plant.StemLineFlags;
+		int[] stemLineIndices = plant.StemLineIndices;
 		ushort[] stemHeights = plant.StemHeights;
 		
 		for(int i=0; i<numberOfStems; i++)
 		{
-			data.Add(stemLineFlags[i]);
+			byte [] stemLineIndex = BitConverter.GetBytes(stemLineIndices[i]);
+			for(int b=0; b<4; b++)
+				data.Add(stemLineIndex[b]);
 			
 			byte[] stemHeight = BitConverter.GetBytes(stemHeights[i]);
 			
@@ -174,9 +198,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			for(int b=0; b<4; b++)
 				data.Add(stemLengthsBytes[b]);
 		}
-		
-		Debug.Log ("stemCurvePoints.Count: " + stemCurvePoints.Count);
-		
+				
 		for(int i=0; i <stemCurvePoints.Count; i++)
 		{
 			for(int b=0; b<4; b++)
@@ -199,7 +221,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		byte[] numberOfPowerupsBytes = BitConverter.GetBytes(numberOfPowerups);
 		data.Add(numberOfPowerupsBytes[0]);
 		data.Add(numberOfPowerupsBytes[1]);
-		Debug.Log ("storing numberOfPowerups as " + numberOfPowerups);
 		for(int i=0; i <numberOfPowerups; i++)
 		{
 			byte[] timeRemainingBytes = BitConverter.GetBytes(im.powerups[i].powerupTimeRemaining);
@@ -249,6 +270,13 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		File.WriteAllBytes(filePath, data.ToArray());
 		Debug.Log ("data.Count: " + data.Count);
 	}
+	
+	private void CalculateTimeSinceSave()
+	{
+		DateTime timeLoaded = new DateTime(ticksLoaded, DateTimeKind.Utc);
+		TimeSpan ts = DateTime.UtcNow.Subtract(timeLoaded);
+		secondsSinceSave = ts.TotalSeconds;
+	}
 	#endregion
 	
 	#region Private
@@ -267,6 +295,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	private int nextStemHeight;
 	private ushort numberOfStemsLoaded = 0;
 	private List<ushort>collectablesToStore;
+	private Int64 ticksLoaded;
 	
 	private void LoadData()
 	{
@@ -281,9 +310,21 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			Debug.Log ("file version is good.");
 		else
 			Debug.LogError("file version has changed!");
+			
+		ticksLoaded = BitConverter.ToInt64(dataLoaded, index);
+		index += 8;
 		
 		cloudSizeLoaded = BitConverter.ToSingle(dataLoaded, index);
 		cloud.Size = cloudSizeLoaded;
+		index += 4;
+		
+		lastControlPointFlippedLoaded = BitConverter.ToBoolean(dataLoaded, index);
+		index += 1;
+		
+		controlLengthLoaded = BitConverter.ToSingle(dataLoaded, index);
+		index += 4;
+		
+		controlAngleLoaded = BitConverter.ToSingle(dataLoaded, index);
 		index += 4;
 		
 		heightLoaded = BitConverter.ToSingle(dataLoaded, index);
@@ -312,20 +353,18 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		
 		stemNextHeightLoaded = BitConverter.ToInt32(dataLoaded, index);
 		index += 4;
-		Debug.Log ("stemHeightLoaded: " + stemNextHeightLoaded);
 		
 		numberOfStemsLoaded = BitConverter.ToUInt16(dataLoaded, index);
-		Debug.Log ("numberOfStemsLoaded: " + numberOfStemsLoaded);
 		index += 2;
 		
 		for(int i=0; i<numberOfStemsLoaded; i++)
 		{
-			stemLineFlagsLoaded.Add(dataLoaded[i*7 + index]);
-			stemHeightsLoaded.Add(BitConverter.ToUInt16(dataLoaded, i*7 + 1 + index));
-			stemLengthsLoaded.Add(BitConverter.ToSingle(dataLoaded, i*7 + 3 + index));
+			stemLineIndicesLoaded.Add(dataLoaded[i*10 + index]);
+			stemHeightsLoaded.Add(BitConverter.ToUInt16(dataLoaded, i*10 + 4 + index));
+			stemLengthsLoaded.Add(BitConverter.ToSingle(dataLoaded, i*10 + 6 + index));
 		}
 		
-		index += numberOfStemsLoaded * 7;
+		index += numberOfStemsLoaded * 10;
 		
 		
 		for(int i=0; i<numberOfStemsLoaded*4; i++)

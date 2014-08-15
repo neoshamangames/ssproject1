@@ -46,7 +46,6 @@ public class Cloud : MonoBehaviour {
 		cloudCam = CloudCamera.Instance.camera;
 		mainCam = Camera.main;
 		transform.localScale = new Vector3(startSize, startSize, 1);
-		Debug.Log ("cloud Awake");
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
 		raindropTimers = new List<float>();
