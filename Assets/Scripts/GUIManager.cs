@@ -1,10 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using Soomla.Store;
 
-public class GUIManager : MonoBehaviour {
+public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 
 	[System.Serializable]
 	public class StoreItem
@@ -66,7 +66,26 @@ public class GUIManager : MonoBehaviour {
 	[Range(-1, 1)]public float poweruptTimeLabelXPercent = 0;
 	[Range(-1, 1)]public float poweruptTimeLabelYPercent = 0;
 	[Range(0,255)]public byte activePowerupTransparency = 100;
+	[Range(0, 1)]public float awardedPrizeSizePercent = .1f;
+	[Range(0, 1)]public float awardedPrizeYPercent = .5f;
+	[Range(0, 1)]public float popupPrizeSizePercent = .1f;
+	[Range(0, 1)]public float popupPrizeYPercent = .5f;
+	[Range(0, 1)]public float popupTextYPercent = .5f;
+	[Range(0, 5)]public float powpupFadeTime = 1f;
+	public float awaredPieceShiftPercent = 0f;
+	#endregion
 	
+	#region Actions
+	public void PrizePopup(ItemManager.Prize prize, int pieceIndex)
+	{
+		popup = true;
+		menuOpen = false;
+		awardePrize = prize;
+		awardedPieceIndex = pieceIndex;
+		popupTimer = 0;
+		Debug.Log ("awardedPieceIndex: " + awardedPieceIndex);
+		
+	}
 	#endregion
 	
 	#region Unity
@@ -132,6 +151,9 @@ public class GUIManager : MonoBehaviour {
 		PVIs = new List<PurchasableVirtualItem>();
 		itemPrices = new List<string>();
 		itemNames = new List<string>();
+		
+		awardedPrizeX = new float[4];
+		awardedPrizeY = new float[4];
 		
 		CalculateValues();
 	}
@@ -225,6 +247,37 @@ public class GUIManager : MonoBehaviour {
 			DrawMenuButton();
 		}
 		
+		if (popup)
+		{
+			GUI.Label(new Rect(0, popupTextY, width, 30), "You've got a prize!", creditsStyle);
+			
+			GUI.color = Color.white;
+			GUI.DrawTexture(new Rect(centerX - popupPrizeSize/2, popupPrizeY, popupPrizeSize, popupPrizeSize), awardePrize.popupTexture);
+			
+			GUI.DrawTexture(new Rect(awardedPrizeX[awardedPieceIndex], awardedPrizeY[awardedPieceIndex], awardedPrizeSize, awardedPrizeSize), awardePrize.pieces[awardedPieceIndex].texture);
+			
+			
+			for(int i = 0; i < 4; i++)
+			{
+				byte t = (byte)Mathf.RoundToInt(popupTimer/ powpupFadeTime * 255);
+				if (popupTimer < powpupFadeTime && i == awardedPieceIndex && awardePrize.pieces[i].inventory < 2)
+				{
+					GUI.color = new Color32(255, 255, 255, t);
+					GUI.DrawTexture(new Rect(centerX - popupPrizeSize/2, popupPrizeY, popupPrizeSize, popupPrizeSize), awardePrize.pieces[i].texture);//fade in
+					GUI.color = Color.white;
+					popupTimer += Time.deltaTime;
+				}
+				else
+					if (awardePrize.pieces[i].inventory > 0)
+						GUI.DrawTexture(new Rect(centerX - popupPrizeSize/2, popupPrizeY, popupPrizeSize, popupPrizeSize), awardePrize.pieces[i].texture);
+			}
+					
+			if (GUI.Button(new Rect(0, 0, width, height), "", buttonStyle))
+				popup = false;
+				
+			
+		}
+		
 		if (plant.state == Plant.PlantState.Dead)
 		{
 			if (GUI.Button(new Rect(centerX, 15, 100, 50), "Reset Plant", buttonStyle))//temp
@@ -300,6 +353,13 @@ public class GUIManager : MonoBehaviour {
 	private ItemManager.Prize powerup1, powerup2;
 	private bool powerup1Active, powerup2Active;
 	private float poweruptTimeLabelX, poweruptTimeLabelY;
+	private bool popup;
+	private ItemManager.Prize awardePrize;
+	private int awardedPieceIndex;
+	private int awardedPrizeSize, popupPrizeSize;
+	private float popupPrizeY, popupTextY;
+	private float[] awardedPrizeX, awardedPrizeY;
+	private float popupTimer;
 	
 	private bool GUIButtonTexture( Rect r, Texture t)
 	{
@@ -382,6 +442,21 @@ public class GUIManager : MonoBehaviour {
 		powerupTimeSize = Mathf.RoundToInt(width * powerupTimeSizePercent);
 		poweruptTimeLabelX = width *.2f * poweruptTimeLabelXPercent;
 		poweruptTimeLabelY = width *.2f * poweruptTimeLabelYPercent;
+		
+		awardedPrizeSize = Mathf.RoundToInt(awardedPrizeSizePercent * width);
+		popupPrizeSize = Mathf.RoundToInt(popupPrizeSizePercent * width);
+		popupPrizeY = height * popupPrizeYPercent;
+		popupTextY = height * popupTextYPercent;
+		
+		awardedPrizeX[0] = centerX - awardedPrizeSize / 2 + awardedPrizeSize * awaredPieceShiftPercent;
+		awardedPrizeX[1] = centerX - awardedPrizeSize/ 2 + awardedPrizeSize * awaredPieceShiftPercent;
+		awardedPrizeX[2] = centerX - awardedPrizeSize / 2 - awardedPrizeSize * awaredPieceShiftPercent;
+		awardedPrizeX[3] = centerX - awardedPrizeSize / 2 - awardedPrizeSize * awaredPieceShiftPercent;
+		
+		awardedPrizeY[0] = awardedPrizeYPercent * height - awardedPrizeSize / 2 + awardedPrizeSize * awaredPieceShiftPercent;
+		awardedPrizeY[1] = awardedPrizeYPercent * height - awardedPrizeSize/ 2 - awardedPrizeSize * awaredPieceShiftPercent;
+		awardedPrizeY[2] = awardedPrizeYPercent * height - awardedPrizeSize / 2 - awardedPrizeSize * awaredPieceShiftPercent;
+		awardedPrizeY[3] = awardedPrizeYPercent * height - awardedPrizeSize / 2 + awardedPrizeSize * awaredPieceShiftPercent;
 		
 	}
 	

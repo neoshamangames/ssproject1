@@ -38,7 +38,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		{
 			
 			SerializedProperty pieces = prop.FindPropertyRelative("pieces");
-			float height = 200;
+			float height = 220;
 			piecesHeight = 0;
 			if (pieces.isExpanded)
 			{
@@ -60,6 +60,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			SerializedProperty name = prop.FindPropertyRelative ("name");
 			SerializedProperty activeTexture = prop.FindPropertyRelative("activeTexture");
 			SerializedProperty offTexture = prop.FindPropertyRelative("offTexture");
+			SerializedProperty popupTexture = prop.FindPropertyRelative("popupTexture");
 			SerializedProperty texture = prop.FindPropertyRelative("texture");
 			SerializedProperty multipleTexture = prop.FindPropertyRelative("multipleTexture");
 			SerializedProperty rarity = prop.FindPropertyRelative ("rarity");
@@ -70,11 +71,12 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			Rect typeRect = new Rect (pos.x, pos.y + 25, pos.width, 15);
 			Rect activeTextureRect = new Rect (pos.x, pos.y + 45, pos.width, 15);
 			Rect offTextureRect = new Rect (pos.x, pos.y + 65, pos.width, 15);
-			Rect textureRect = new Rect (pos.x, pos.y + 85, pos.width, 15);
-			Rect multipleTextureRect = new Rect (pos.x, pos.y + 105, pos.width, 15);
-			Rect rarityRect = new Rect (pos.x, pos.y + 125, pos.width, 15);
-			Rect piecesRect = new Rect(pos.x, pos.y + 145, pos.width, 15);
-			Rect inventoryRect = new Rect(pos.x, pos.y + 165 + piecesHeight, pos.width, 15);
+			Rect popupTextureRect = new Rect (pos.x, pos.y + 85, pos.width, 15);
+			Rect textureRect = new Rect (pos.x, pos.y + 105, pos.width, 15);
+			Rect multipleTextureRect = new Rect (pos.x, pos.y + 125, pos.width, 15);
+			Rect rarityRect = new Rect (pos.x, pos.y + 145, pos.width, 15);
+			Rect piecesRect = new Rect(pos.x, pos.y + 165, pos.width, 15);
+			Rect inventoryRect = new Rect(pos.x, pos.y + 185 + piecesHeight, pos.width, 15);
 			
 			int indent = EditorGUI.indentLevel;
 			//			EditorGUI.indentLevel = 0;
@@ -87,6 +89,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				EditorGUI.PropertyField(multipleTextureRect, multipleTexture);
 			}
 			EditorGUI.PropertyField(offTextureRect, offTexture);
+			EditorGUI.PropertyField(popupTextureRect, popupTexture);
 			EditorGUI.PropertyField(textureRect, texture);
 			EditorGUI.PropertyField(rarityRect, rarity);
 			EditorGUI.PropertyField(inventoryRect, inventory);
@@ -100,10 +103,10 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				SerializedProperty powerupTimeRemaining = prop.FindPropertyRelative("powerupTimeRemaining");
 				SerializedProperty powerupValue = prop.FindPropertyRelative("powerupValue");
 				
-				Rect powerupMultiplierRect = new Rect(pos.x, pos.y + 185 + piecesHeight, pos.width/2, 15);
-				Rect powerupActiveTimeRect = new Rect(pos.x, pos.y + 205 + piecesHeight, pos.width/2, 15);
-				Rect powerupTimeRemainingRect = new Rect(pos.x + pos.width/2, pos.y + 205 + piecesHeight, pos.width/2, 15);
-				Rect powerupValueRect = new Rect(pos.x + pos.width/2, pos.y + 185 + piecesHeight, pos.width/2, 15);
+				Rect powerupMultiplierRect = new Rect(pos.x, pos.y + 205 + piecesHeight, pos.width/2, 15);
+				Rect powerupActiveTimeRect = new Rect(pos.x, pos.y + 225 + piecesHeight, pos.width/2, 15);
+				Rect powerupTimeRemainingRect = new Rect(pos.x + pos.width/2, pos.y + 225 + piecesHeight, pos.width/2, 15);
+				Rect powerupValueRect = new Rect(pos.x + pos.width/2, pos.y + 205 + piecesHeight, pos.width/2, 15);
 				
 				EditorGUI.PropertyField(powerupMultiplierRect, powerupMultiplier);
 				EditorGUI.PropertyField(powerupActiveTimeRect, powerupActiveTime);
@@ -129,6 +132,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		public string name;
 		public Texture2D activeTexture;
 		public Texture2D offTexture;
+		public Texture2D popupTexture;
 		public Texture2D texture;
 		public Texture2D multipleTexture;
 		[Range(.1f, 2)]public float rarity = 1f;
@@ -160,6 +164,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	void Awake()
 	{
 		dm = DataManager.Instance;
+		gm = GUIManager.Instance;
 		StoreEvents.OnMarketPurchase += onMarketPurchase;
 		StoreEvents.OnItemPurchased += onItemPurchased;
 		StoreEvents.OnGoodBalanceChanged += onGoodBalanceChanged;
@@ -263,6 +268,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				CheckForCompletePrize(selectedPrize);
 				if (!powerupSelected)
 					dm.StoreCollectableIndex((ushort)i);
+				gm.PrizePopup(selectedPrize, piece);
 				break;
 			}
 			selection -= selectedPrizes[i].rarity;
@@ -327,8 +333,9 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	#region Private
 	private const string REVIVE_NAME = "Revive Plant";
 	private const int REVIVE_INDEX = 2;
-	private int reviveIndex;
+	private GUIManager gm;
 	private DataManager dm;
+	private int reviveIndex;
 	private float powerupRarirtyTotal = 0;
 	private float collectableRarirtyTotal = 0;
 	
