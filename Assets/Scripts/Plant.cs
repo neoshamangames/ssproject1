@@ -674,7 +674,7 @@ public class Plant : MonoBehaviour {
 		if (state == PlantState.Dead)
 			return;
 
-		float secondsToAdvance = dm.secondsSinceSave;
+		float secondsToAdvance = (float)dm.secondsSinceSave;
 		//TODO: use anti-cheat plugin
 		AdvancePlant(secondsToAdvance);
 	}
