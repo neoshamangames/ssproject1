@@ -8,6 +8,8 @@ public class Flower : MonoBehaviour {
 	#region Attributes
 	public Plant.StemmingAttributes stemming;
 	public FlowerState state = FlowerState.PreBloom;
+	public Sprite budSprite;
+	public Sprite bloomSprite;
 	#endregion
 	
 	#region Properties
@@ -47,7 +49,7 @@ public class Flower : MonoBehaviour {
 	{
 		sr = GetComponent<SpriteRenderer>();
 		im = ItemManager.Instance;
-		fruitedColor = Color.red;
+//		fruitedColor = Color.red;
 	}
 	
 	void Start()
@@ -65,7 +67,8 @@ public class Flower : MonoBehaviour {
 			state = FlowerState.Fruited;
 			float scale = stemming.maxFlowerSize;
 			transform.localScale = new Vector3(scale, scale, scale);
-			sr.color = Color.red;
+//			sr.color = Color.red;
+			sr.sprite = bloomSprite;
 		}
 		else if (growthState < 0)
 		{
@@ -114,16 +117,17 @@ public class Flower : MonoBehaviour {
 			{
 				t = 1;
 				state = FlowerState.Fruited;
+				sr.sprite = bloomSprite;
 			}
 			transitionTime += deltaTime;
-			sr.color = Color.Lerp(Color.white, fruitedColor, t);
+//			sr.color = Color.Lerp(Color.white, fruitedColor, t);
 			//animation will play here
 			break;
 		case FlowerState.Fruited:
 			break;
 		case FlowerState.Harvested:
 			float t2 = transitionTime/stemming.harvestingTime;
-			sr.color = Color.Lerp(fruitedColor, Color.clear, t2);
+			sr.color = Color.Lerp(Color.white, Color.clear, t2);
 			if (transitionTime >= stemming.harvestingTime)
 			{
 				PrepareNextBud();
@@ -157,7 +161,8 @@ public class Flower : MonoBehaviour {
 			{
 				scale = stemming.maxFlowerSize;
 				state = FlowerState.Fruited;
-				sr.color = fruitedColor;
+//				sr.color = fruitedColor;
+				sr.sprite = bloomSprite;
 			}
 			transform.localScale = new Vector3(scale, scale, scale);
 		}
@@ -194,6 +199,7 @@ public class Flower : MonoBehaviour {
 		transform.localScale = new Vector3(0, 0, 0);
 		sr.color = Color.white;
 		state = FlowerState.PreBloom;
+		sr.sprite = budSprite;
 	}
 	#endregion
 }
