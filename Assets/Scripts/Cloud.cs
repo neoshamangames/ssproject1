@@ -45,6 +45,7 @@ public class Cloud : MonoBehaviour {
 	{
 		cloudCam = CloudCamera.Instance.camera;
 		mainCam = Camera.main;
+		dm = DataManager.Instance;
 		transform.localScale = new Vector3(startSize, startSize, 1);
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
@@ -54,6 +55,11 @@ public class Cloud : MonoBehaviour {
 		screenHeight = cloudCam.ViewportToWorldPoint(new Vector3(0, 1, distanceFromCam)).y - cloudCam.ViewportToWorldPoint(new Vector3(0, 0, distanceFromCam)).y;
 		growthRate = (maxSize - minSize) / (useDebugRefillTime ? debugRefillTime : releaseRefillTime);
 		depletionRate = (maxSize - minSize) / depletionTime;
+	}
+	
+	void Start()
+	{
+		Catchup();	
 	}
 
 	void Update()
@@ -97,6 +103,7 @@ public class Cloud : MonoBehaviour {
 	#region Private
 	private Camera cloudCam;
 	private Camera mainCam;
+	private DataManager dm;
 	private float screenHeight;
 	private Vector3 cloudScreenPos;
 	private const int MAX_RAIN_DROPS = 500;
@@ -185,6 +192,16 @@ public class Cloud : MonoBehaviour {
 		raindrops.Add(drop);
 		raindropTimers.Add(0);
 		raindropLengths.Add(length);
+	}
+	
+	private void Catchup()
+	{
+		currentScale = transform.localScale;
+		Debug.Log ("size in Catchup(): " + currentScale.x);
+		float seconds = (float)dm.secondsSinceSave;
+		float grow = seconds * growthRate;
+		float newScale = Mathf.Clamp(currentScale.x + grow, minSize, maxSize);
+		transform.localScale = new Vector3(newScale, newScale, 1);
 	}
 	#endregion
 }

@@ -464,8 +464,10 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	{
 //		if (GUI.Button(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSizeY), menuButton, buttonStyle))
 		if (GUIButtonTexture(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton))
+		{
 			menuOpen = !menuOpen;
-		
+			popup = false;
+		}
 
 //		GUI.DrawTexture(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton);
 	}

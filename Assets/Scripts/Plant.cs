@@ -676,7 +676,6 @@ public class Plant : MonoBehaviour {
 			return;
 
 		float secondsToAdvance = (float)dm.secondsSinceSave;
-		secondsToAdvance = 60;//TODO: remove
 		//TODO: use anti-cheat plugin
 		AdvancePlant(secondsToAdvance);
 	}
@@ -852,7 +851,7 @@ public class Plant : MonoBehaviour {
 
 		
 		AddHeight(heightToAdd);
-		//saturation -= totalDry;//TODO:add back in
+		saturation -= totalDry;//TODO:add back in
 		UpdateState();
 	}
 	
