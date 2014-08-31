@@ -639,6 +639,7 @@ public class Plant : MonoBehaviour {
 			if (dm.stemLengthsLoaded.Count > 0)
 				LoadStems();
 			CatchupStems();
+			cam.CatchupBackground();
 		}
 		else
 		{
@@ -675,6 +676,7 @@ public class Plant : MonoBehaviour {
 			return;
 
 		float secondsToAdvance = (float)dm.secondsSinceSave;
+		secondsToAdvance = 60;//TODO: remove
 		//TODO: use anti-cheat plugin
 		AdvancePlant(secondsToAdvance);
 	}
@@ -850,7 +852,7 @@ public class Plant : MonoBehaviour {
 
 		
 		AddHeight(heightToAdd);
-		saturation -= totalDry;
+		//saturation -= totalDry;//TODO:add back in
 		UpdateState();
 	}
 	

@@ -22,6 +22,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	[Range(0, 120)]public float maxFOV = 120f; 
 	[Range (.5f, 60)]public float popBackTime = 5f;
 	[Range (0, 2)]public float doubleTapTimeout = .5f;
+	public Transform backgroundRepeatPrefab;
+	public Transform environmentTransform;
+	public float backgroundRepeatStartY;
+	public float backgroundRepeatIncrement;
 	#endregion
 
 	#region Properties
@@ -35,6 +39,13 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public void Reset()
 	{
 		SetCameraY(initialCameraY);
+	}
+	
+	public void CatchupBackground()
+	{
+		float plantY = plant.TopPosisiton.y;
+		while (plantY > backgroundRepeatY)
+			NewBackgroundTile();
 	}
 	#endregion
 
@@ -51,6 +62,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		width = Screen.width;
 		plantDistanceFromCam = plant.transform.position.z - transform.position.z;
 		initialCameraY = transform.position.y;
+		backgroundRepeatY = backgroundRepeatStartY;
 	}
 	
 	void Start()
@@ -66,6 +78,8 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	void Update () {
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
 		float plantY = plant.TopPosisiton.y;
+		if (plantY > backgroundRepeatY)
+			NewBackgroundTile();
 		bool inScrollRange = false;
 		doubleTapTimer += Time.deltaTime;
 		if (plantY > topEdge)
@@ -196,8 +210,18 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private DataManager dm;
 	private float lastTouchTimer, doubleTapTimer;
 	private float initialCameraY;
+	private float backgroundRepeatY, backgroundRepeatTileY;
 	
 //	private float max =0;//temp
+
+	private void NewBackgroundTile()
+	{
+		backgroundRepeatY += backgroundRepeatIncrement;
+		backgroundRepeatTileY += backgroundRepeatIncrement;
+		Transform newTile = (Transform)Instantiate(backgroundRepeatPrefab);
+		newTile.parent = environmentTransform;
+		newTile.position = new Vector3(0, backgroundRepeatTileY);
+	}
 	
 	private void ProcessTouchBegan(Vector2 coordinates)
 	{
