@@ -23,9 +23,6 @@ public class Stem : Object {
 		this.line = line;
 		this.lineIndex = lineIndex;
 		this.height = height;
-		int low = Mathf.FloorToInt(growth);
-		lowPoint = line.points3[low];
-		highPoint = line.points3[low + 1];
 		
 		this.segments = stemming.segmentsPer;
 		this.stemming = stemming;
@@ -33,10 +30,16 @@ public class Stem : Object {
 		
 		if (growth < segments - 1)
 		{
+			int low = Mathf.FloorToInt(growth);
+			lowPoint = line.points3[low];
+			highPoint = line.points3[low + 1];
 			line.drawEnd =  low + 1;
 		}
 		else
 		{
+			int low = segments - 2;
+			lowPoint = line.points3[low];
+			highPoint = line.points3[low + 1];
 			line.drawEnd = segments - 1;
 			lengthening = false;
 		}
@@ -71,7 +74,17 @@ public class Stem : Object {
 	#region Actions
 	public bool CatchupGrowth(float newGrowth, float plantWidth)
 	{
-		int low = Mathf.FloorToInt(newGrowth);
+		int low;
+		float currentGrowth = growth + newGrowth;
+		if (currentGrowth > segments - 1)
+		{
+			low = segments - 2;
+		}
+		else
+		{
+			low = Mathf.FloorToInt(currentGrowth);
+		}
+		
 		lowPoint = line.points3[low];
 		highPoint = line.points3[low + 1];
 		
@@ -80,7 +93,8 @@ public class Stem : Object {
 	
 	
 	public bool Grow(float newGrowth, float plantWidth) //returns true when fully grown
-	{	
+	{
+		
 		growth += newGrowth;
 		if (lengthening)
 		{
@@ -110,7 +124,7 @@ public class Stem : Object {
 				direction = line.points3[intPart + 1] - line.points3[intPart];
 				nextDirection = line.points3[intPart + 2] - line.points3[intPart + 1];
 			}
-			line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);
+			line.points3[intPart + 1] = Vector3.Lerp(lowPoint, highPoint, decPart);//TODO
 			flower.transform.position = line.points3[intPart + 1];
 			//Debug.Log("stem.line.drawEnd: " + stem.line.drawEnd);
 			float angle = Vector3.Angle(direction, Vector3.up);

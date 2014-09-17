@@ -25,6 +25,10 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	public bool lastControlPointFlippedLoaded;
 	public float controlLengthLoaded;
 	public float controlAngleLoaded;
+	#if UNITY_EDITOR
+	public bool overrideAdvanceTime;
+	public float secondsToAdvance;
+	#endif
 	#endregion
 
 	#region Unity
@@ -60,6 +64,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	#endregion
 	
 	#region Actions
+	
 	public void Reset()
 	{
 		numberOfCurves = 0;
@@ -276,6 +281,10 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		DateTime timeLoaded = new DateTime(ticksLoaded, DateTimeKind.Utc);
 		TimeSpan ts = DateTime.UtcNow.Subtract(timeLoaded);
 		secondsSinceSave = ts.TotalSeconds;
+		#if UNITY_EDITOR
+		if (overrideAdvanceTime)
+			secondsSinceSave = secondsToAdvance;
+		#endif
 	}
 	#endregion
 	
@@ -296,8 +305,17 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	private ushort numberOfStemsLoaded = 0;
 	private List<ushort>collectablesToStore;
 	private Int64 ticksLoaded;
+	private int ticksIndex, saturationIndex;
 	
-	private void LoadData()
+	public void LoadResumeData()
+	{
+		dataLoaded = File.ReadAllBytes(filePath);
+		ticksLoaded = BitConverter.ToInt64(dataLoaded, ticksIndex);
+		saturationLoaded = BitConverter.ToSingle(dataLoaded, saturationIndex);
+		CalculateTimeSinceSave();
+	}
+	
+	public void LoadData()
 	{
 		int index = 0;		
 		dataLoaded = File.ReadAllBytes(filePath);
@@ -310,7 +328,8 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			Debug.Log ("file version is good.");
 		else
 			Debug.LogError("file version has changed!");
-			
+		
+		ticksIndex	= index;
 		ticksLoaded = BitConverter.ToInt64(dataLoaded, index);
 		index += 8;
 		
@@ -330,6 +349,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		heightLoaded = BitConverter.ToSingle(dataLoaded, index);
 		index += 4;
 		
+		saturationIndex = index;
 		saturationLoaded = BitConverter.ToSingle(dataLoaded, index);
 		index += 4;
 		

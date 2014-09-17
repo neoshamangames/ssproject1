@@ -9,7 +9,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public Plant plant;
 	public Cloud cloud;
 	public float scrollEdgePercent = .75f;
-	public float panSensitivity = 1f;
 	public float xScrollBuffer = .1f;
 	public float topScrollBuffer = .1f;
 	public float bottomScrollBuffer = .1f;
@@ -22,6 +21,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	[Range(0, 120)]public float maxFOV = 120f; 
 	[Range (.5f, 60)]public float popBackTime = 5f;
 	[Range (0, 2)]public float doubleTapTimeout = .5f;
+	public Transform backgroundRepeatPrefab;
+	public Transform environmentTransform;
+	public float backgroundRepeatStartY;
+	public float backgroundRepeatIncrement;
 	#endregion
 
 	#region Properties
@@ -36,12 +39,30 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	{
 		SetCameraY(initialCameraY);
 	}
+	
+	public void GoToPlantTop()
+	{
+		float plantY = plant.TopPosisiton.y;
+		SetCameraY(plantY);
+		Vector3 pos = transform.position;
+		pos.x = 0;
+		transform.position = pos;
+	}
+	
+	public void CatchupBackground()
+	{
+		float plantY = plant.TopPosisiton.y;
+		while (plantY > backgroundRepeatY)
+			NewBackgroundTile();
+	}
 	#endregion
 
 	#region Unity
 	void Awake() {
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
+		tm = TutorialManager.Instance;
+		
 //		VectorLine.SetCamera3D(mainCam);
 		vectorCam = VectorLine.SetCamera(cloudCam);
 		vectorCam.orthographic = true;
@@ -51,6 +72,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		width = Screen.width;
 		plantDistanceFromCam = plant.transform.position.z - transform.position.z;
 		initialCameraY = transform.position.y;
+		backgroundRepeatY = backgroundRepeatStartY;
 	}
 	
 	void Start()
@@ -66,6 +88,8 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	void Update () {
 //		float plantYPos = mainCam.WorldToViewportPoint(plant.TopPosisiton).y;
 		float plantY = plant.TopPosisiton.y;
+		if (plantY > backgroundRepeatY)
+			NewBackgroundTile();
 		bool inScrollRange = false;
 		doubleTapTimer += Time.deltaTime;
 		if (plantY > topEdge)
@@ -179,6 +203,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	#region Private
 	private const int CLOUD_LAYER = 9;
 	private LayerMask notCloudLayer = ~(1 << CLOUD_LAYER);
+	private TutorialManager tm;
 	private float height;
 	private float width;
 	private Camera vectorCam;
@@ -196,8 +221,19 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private DataManager dm;
 	private float lastTouchTimer, doubleTapTimer;
 	private float initialCameraY;
+	private float backgroundRepeatY, backgroundRepeatTileY;
+	private bool firstCloudPress = true;
 	
 //	private float max =0;//temp
+
+	private void NewBackgroundTile()
+	{
+		backgroundRepeatY += backgroundRepeatIncrement;
+		backgroundRepeatTileY += backgroundRepeatIncrement;
+		Transform newTile = (Transform)Instantiate(backgroundRepeatPrefab);
+		newTile.parent = environmentTransform;
+		newTile.position = new Vector3(0, backgroundRepeatTileY);
+	}
 	
 	private void ProcessTouchBegan(Vector2 coordinates)
 	{
@@ -250,7 +286,15 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	private void ProcessTouchEnded(Vector2 coordinates)
 	{
-		if (!touchBeganOnCloud)
+		if (touchBeganOnCloud)
+		{
+			if (firstCloudPress)
+			{
+				firstCloudPress = false;
+				tm.TriggerTutorial(1);
+			}
+		}		
+		else
 		{
 			scrollMomentum = (prevCoords.y - coordinates.y) * scrollMomentumSensitivity;
 			scrollDirection = (scrollMomentum > 0) ? 1 : -1;
@@ -302,12 +346,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 //		Debug.Log("coordsDelta: " + coordsDelta);
 //		Debug.Log("posDelta: " + posDelta);
 		CalculateEdges();
-	}
-	
-	void GoToPlantTop()
-	{
-		float plantY = plant.TopPosisiton.y;
-		SetCameraY(plantY);
 	}
 	
 	private void MoveCamera(Vector3 movement)
