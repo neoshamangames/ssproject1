@@ -49,6 +49,7 @@ public class Flower : MonoBehaviour {
 	{
 		sr = GetComponent<SpriteRenderer>();
 		im = ItemManager.Instance;
+		tm = TutorialManager.Instance;
 //		fruitedColor = Color.red;
 	}
 	
@@ -81,6 +82,7 @@ public class Flower : MonoBehaviour {
 		{
 			state = FlowerState.Blooming;
 			transform.localScale = new Vector3(growthState, growthState, growthState);
+			tm.TriggerTutorial(6);
 		}
 	}
 	
@@ -112,12 +114,13 @@ public class Flower : MonoBehaviour {
 			transform.localScale = new Vector3(scale, scale, scale);
 			break;
 		case FlowerState.Budding:
-			float t = transitionTime/stemming.buddingTime;
+//			float t = transitionTime/stemming.buddingTime;
 			if (transitionTime >= stemming.buddingTime)
 			{
-				t = 1;
+//				t = 1;
 				state = FlowerState.Fruited;
 				sr.sprite = bloomSprite;
+				tm.TriggerTutorial(6);
 			}
 			transitionTime += deltaTime;
 //			sr.color = Color.Lerp(Color.white, fruitedColor, t);
@@ -141,7 +144,7 @@ public class Flower : MonoBehaviour {
 	public void CatchupGrowth(float newGrowth)
 	{
 		nextFlowerDelay = stemming.flowerDelay;
-		Debug.Log ("CatchupGrowth newGrowth: " + newGrowth + ", nextFlowerDelay: " + nextFlowerDelay + ", growthCounter: " + growthCounter);
+//		Debug.Log ("CatchupGrowth newGrowth: " + newGrowth + ", nextFlowerDelay: " + nextFlowerDelay + ", growthCounter: " + growthCounter);
 		
 		if (state == FlowerState.PreBloom)
 		{
@@ -184,6 +187,7 @@ public class Flower : MonoBehaviour {
 	#region Private
 	private SpriteRenderer sr;
 	private ItemManager im;
+	private TutorialManager tm;
 	private float transitionTime = 0;
 	private float growthCounter = 0;
 	private float nextFlowerDelay;
@@ -192,7 +196,6 @@ public class Flower : MonoBehaviour {
 	
 	private void PrepareNextBud()
 	{
-		Debug.Log ("PrepareNextBud()");
 		transitionTime = 0;
 		growthCounter = 0;
 		nextFlowerDelay = stemming.newFlowerDelay;

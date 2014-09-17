@@ -46,6 +46,7 @@ public class Cloud : MonoBehaviour {
 		cloudCam = CloudCamera.Instance.camera;
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
+				
 		transform.localScale = new Vector3(startSize, startSize, 1);
 		spriteRenderer = GetComponent<SpriteRenderer>();
 		raindrops = new List<VectorLine>();
@@ -97,6 +98,12 @@ public class Cloud : MonoBehaviour {
 			ScaleCloud(rain);
 			plant.Water(deltaTime / depletionTime);
 		}
+		
+	}
+	
+	public void Reset()
+	{
+		Size = startSize;
 	}
 	#endregion
 	
@@ -197,7 +204,6 @@ public class Cloud : MonoBehaviour {
 	private void Catchup()
 	{
 		currentScale = transform.localScale;
-		Debug.Log ("size in Catchup(): " + currentScale.x);
 		float seconds = (float)dm.secondsSinceSave;
 		float grow = seconds * growthRate;
 		float newScale = Mathf.Clamp(currentScale.x + grow, minSize, maxSize);

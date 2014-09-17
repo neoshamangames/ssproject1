@@ -19,8 +19,8 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	
 	#region Attributes
 	public Plant plant;
-	public List<Prize> powerups;
-	public List<Prize> collectables;
+	[System.NonSerialized]public List<Prize> powerups;
+	[System.NonSerialized]public List<Prize> collectables;
 	[Range(0,1)]public float chanceOfPowerup = .5f;
 	public float growFasterTime;
 	[Range(1,3)]public float growFasterMultiplier = 1.5f;
@@ -181,18 +181,8 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			}
 			else
 			{
-				collectableRarirtyTotal += prize.rarity;
 				collectables.Add(prize);
 			}
-		}
-		
-		for(int i=0; i < powerups.Count; i++)
-		{
-			if (powerups[i].name  == REVIVE_NAME)
-				{
-					reviveIndex = i;
-					break;
-				}
 		}
 	}
 	
@@ -256,19 +246,34 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	public void AwardPrize()
 	{
 		bool powerupSelected = (Random.Range(0.0f, 1.0f) < chanceOfPowerup);
-		float selection = Random.Range(0, powerupSelected ? powerupRarirtyTotal : collectableRarirtyTotal);
-		List<Prize> selectedPrizes = powerupSelected ? powerups : collectables;
+		List<Prize> selectedPrizes = powerupSelected ? powerups : GetUnownedCollectables();
+		if (selectedPrizes.Count == 0)
+		{
+			powerupSelected = true;
+			selectedPrizes = powerups;
+		}
+		float selection = Random.Range(0, powerupSelected ? powerupRarirtyTotal : GetRarityTotal(selectedPrizes));
 		for(int i=0; i < selectedPrizes.Count; i++)
 		{
 			Prize selectedPrize = selectedPrizes[i];
 			if (selection < selectedPrize.rarity)
 			{
-				int piece = Random.Range(0, selectedPrize.pieces.Length);
+				int piece;
+				if (powerupSelected)
+				{
+					piece = Random.Range(0, selectedPrize.pieces.Length);
+				}
+				else
+				{
+					int[] piecesIndices = GetUnownedPieceIndices(selectedPrize);
+					int selectedPieceIndex = Random.Range(0, piecesIndices.Length);
+					piece = piecesIndices[selectedPieceIndex];
+				}
 				selectedPrize.pieces[piece].inventory++;
-				CheckForCompletePrize(selectedPrize);
+				bool complete = CheckForCompletePrize(selectedPrize);
 				if (!powerupSelected)
 					dm.StoreCollectableIndex((ushort)i);
-				gm.PrizePopup(selectedPrize, piece);
+				gm.PrizePopup(selectedPrize, piece, complete);
 				break;
 			}
 			selection -= selectedPrizes[i].rarity;
@@ -279,7 +284,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	{
 		if (plant.state == Plant.PlantState.Dead)
 		{
-			if (prize.name == REVIVE_NAME)
+			if (prize.name == Constants.REVIVE_NAME)
 			{
 				OnRevive(prize);
 				prize.inventory--;
@@ -289,7 +294,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		}
 		else
 		{
-			if (prize.name != REVIVE_NAME)
+			if (prize.name != Constants.REVIVE_NAME)
 			{
 				prize.powerupValue = prize.powerupMultiplier;
 				prize.powerupTimeRemaining += prize.powerupActiveTime;
@@ -324,22 +329,18 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	
 	private void UpdateBalances()
 	{
-		prizes[REVIVE_INDEX].inventory = StoreInventory.GetItemBalance(Constants.REVIVE_ID);
-		prizes[0].inventory = 10;//TODO
-		prizes[1].inventory = 10;//TODO
+		prizes[Constants.REVIVE_INDEX].inventory = StoreInventory.GetItemBalance(Constants.REVIVE_ID);
+//		prizes[0].inventory = 10;
+//		prizes[1].inventory = 10;
 	}
 	#endregion
 		
 	#region Private
-	private const string REVIVE_NAME = "Revive Plant";
-	private const int REVIVE_INDEX = 2;
 	private GUIManager gm;
 	private DataManager dm;
-	private int reviveIndex;
 	private float powerupRarirtyTotal = 0;
-	private float collectableRarirtyTotal = 0;
 	
-	private void CheckForCompletePrize(Prize prize)
+	private bool CheckForCompletePrize(Prize prize)
 	{
 		bool haveAllPieces = true;
 		foreach(Piece piece in prize.pieces)
@@ -356,8 +357,11 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				piece.inventory--;
 			
 			prize.inventory++;
+			
+			return true;
 		}
 		
+		return false;
 	}
 	
 	private string FormatPrizeString(Prize prize)
@@ -383,5 +387,35 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			return (plant.state != Plant.PlantState.Dead);
 		}
 	}
-	#endregion
+	
+	private List<Prize> GetUnownedCollectables()
+	{
+		List<Prize> availableCollectables = new List<Prize>();
+		foreach(Prize collectable in collectables)
+		{
+			if (collectable.inventory < 1)
+				availableCollectables.Add(collectable);
+		}
+		return availableCollectables;
 	}
+	
+	private int[] GetUnownedPieceIndices(Prize prize)
+	{
+		List<int>unownedPieces = new List<int>();
+		for(int i=0; i < prize.pieces.Length; i++)
+		{
+			if (prize.pieces[i].inventory < 1)
+				unownedPieces.Add(i);
+		}
+		return unownedPieces.ToArray();
+	}
+	
+	private float GetRarityTotal(List<Prize> prizes)
+	{
+		float rarirtyTotal = 0;
+		foreach(Prize prize in prizes)
+			rarirtyTotal += prize.rarity;
+		return rarirtyTotal;
+	}
+	#endregion
+}

@@ -9,7 +9,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public Plant plant;
 	public Cloud cloud;
 	public float scrollEdgePercent = .75f;
-	public float panSensitivity = 1f;
 	public float xScrollBuffer = .1f;
 	public float topScrollBuffer = .1f;
 	public float bottomScrollBuffer = .1f;
@@ -41,6 +40,15 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		SetCameraY(initialCameraY);
 	}
 	
+	public void GoToPlantTop()
+	{
+		float plantY = plant.TopPosisiton.y;
+		SetCameraY(plantY);
+		Vector3 pos = transform.position;
+		pos.x = 0;
+		transform.position = pos;
+	}
+	
 	public void CatchupBackground()
 	{
 		float plantY = plant.TopPosisiton.y;
@@ -53,6 +61,8 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	void Awake() {
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
+		tm = TutorialManager.Instance;
+		
 //		VectorLine.SetCamera3D(mainCam);
 		vectorCam = VectorLine.SetCamera(cloudCam);
 		vectorCam.orthographic = true;
@@ -193,6 +203,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	#region Private
 	private const int CLOUD_LAYER = 9;
 	private LayerMask notCloudLayer = ~(1 << CLOUD_LAYER);
+	private TutorialManager tm;
 	private float height;
 	private float width;
 	private Camera vectorCam;
@@ -211,6 +222,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private float lastTouchTimer, doubleTapTimer;
 	private float initialCameraY;
 	private float backgroundRepeatY, backgroundRepeatTileY;
+	private bool firstCloudPress = true;
 	
 //	private float max =0;//temp
 
@@ -274,7 +286,15 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	private void ProcessTouchEnded(Vector2 coordinates)
 	{
-		if (!touchBeganOnCloud)
+		if (touchBeganOnCloud)
+		{
+			if (firstCloudPress)
+			{
+				firstCloudPress = false;
+				tm.TriggerTutorial(1);
+			}
+		}		
+		else
 		{
 			scrollMomentum = (prevCoords.y - coordinates.y) * scrollMomentumSensitivity;
 			scrollDirection = (scrollMomentum > 0) ? 1 : -1;
@@ -326,12 +346,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 //		Debug.Log("coordsDelta: " + coordsDelta);
 //		Debug.Log("posDelta: " + posDelta);
 		CalculateEdges();
-	}
-	
-	void GoToPlantTop()
-	{
-		float plantY = plant.TopPosisiton.y;
-		SetCameraY(plantY);
 	}
 	
 	private void MoveCamera(Vector3 movement)
