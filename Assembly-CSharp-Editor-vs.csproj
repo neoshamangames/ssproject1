@@ -52,6 +52,7 @@
      <Compile Include="Assets\Soomla\Editor\SoomlaSettingsEditor.cs" />
      <None Include="Assets\Vectrosity\Documentation\Vectrosity changelog.txt" />
      <None Include="Assets\Shaders\Mobile-Particle-Alpha - zwrite.shader" />
+     <None Include="Assets\Plugins\readme.txt" />
      <None Include="Assets\Plugins\Android\AndroidManifest.xml" />
      <None Include="Assets\Vectrosity\Documentation\Vectrosity Upgrade Guide.txt" />
  <Reference Include="Vectrosity">

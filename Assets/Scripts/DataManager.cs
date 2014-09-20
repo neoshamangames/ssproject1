@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 public class DataManager : SingletonMonoBehaviour<DataManager> {
 
@@ -44,6 +45,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		stemHeightsLoaded = new List<ushort>();
 		stemLineIndicesLoaded = new List<int>();
 		data = new List<byte>();
+		md5 = MD5.Create();
 	}
 	
 	void Start()
@@ -51,8 +53,8 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		if (File.Exists(filePath))
 		{
 			Debug.Log("file exists. loading...");
-			LoadData();
-			CalculateTimeSinceSave();
+			if (LoadData())
+				CalculateTimeSinceSave();
 		}
 		else
 		{
@@ -129,7 +131,12 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		data.Add(fileVersionBytes[0]);
 		data.Add(fileVersionBytes[1]);
 		
+		#if UNITY_ANDROID
+		DateTime now = UnbiasedTime.Instance.Now();
+		#else
 		DateTime now = DateTime.UtcNow;
+		#endif
+		
 		
 		byte[] ticks = BitConverter.GetBytes(now.Ticks);
 		for(int b=0; b<8; b++)
@@ -271,16 +278,57 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			
 		}
 		
+		byte[] dataArray = data.ToArray();
+		Debug.Log ("dataArray.length: " + dataArray.Length);
+		byte[] hash = md5.ComputeHash(dataArray);
 		
-		File.WriteAllBytes(filePath, data.ToArray());
-		Debug.Log ("data.Count: " + data.Count);
+		File.WriteAllBytes(filePath, dataArray);
+		
+		AppendAllBytes(filePath, hash);
+	}
+	
+	private void AppendAllBytes(string path, byte[] bytes)
+	{
+		using (var stream = new FileStream(path, FileMode.Append))
+		{
+			stream.Write(bytes, 0, bytes.Length);
+		}
+	}
+	
+	private byte[] ReadData(string path)
+	{
+		using (var stream = new FileStream(path, FileMode.Open))
+		{
+			int numberOfBytes = (int)(stream.Length - 16);
+			byte[] bytes = new byte[numberOfBytes];
+			stream.Read(bytes, 0, numberOfBytes);
+			return bytes;
+		}
+	}
+	
+	private byte[] ReadHash(string path)
+	{
+		using (var stream = new FileStream(path, FileMode.Open))
+		{
+			int position = (int)(stream.Length - 16);
+			byte[] bytes = new byte[16];
+			stream.Position = position;
+			stream.Read(bytes, 0, 16);
+			return bytes;
+		}
 	}
 	
 	private void CalculateTimeSinceSave()
 	{
 		DateTime timeLoaded = new DateTime(ticksLoaded, DateTimeKind.Utc);
-		TimeSpan ts = DateTime.UtcNow.Subtract(timeLoaded);
+		#if UNITY_ANDROID
+		DateTime now = UnbiasedTime.Instance.Now();
+		#else
+		DateTime now = DateTime.UtcNow;
+		#endif
+		TimeSpan ts = now.Subtract(timeLoaded);
 		secondsSinceSave = ts.TotalSeconds;
+		Debug.Log ("secondsSinceSave: " + secondsSinceSave);
 		#if UNITY_EDITOR
 		if (overrideAdvanceTime)
 			secondsSinceSave = secondsToAdvance;
@@ -306,6 +354,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	private List<ushort>collectablesToStore;
 	private Int64 ticksLoaded;
 	private int ticksIndex, saturationIndex;
+	private MD5 md5;
 	
 	public void LoadResumeData()
 	{
@@ -315,10 +364,23 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		CalculateTimeSinceSave();
 	}
 	
-	public void LoadData()
+	public bool LoadData()
 	{
-		int index = 0;		
-		dataLoaded = File.ReadAllBytes(filePath);
+	
+		int index = 0;
+//		dataLoaded = File.ReadAllBytes(filePath);
+		dataLoaded = ReadData(filePath);
+		Debug.Log ("dataLoaded.Length: " + dataLoaded.Length);
+		byte[] hashLoaded = ReadHash(filePath);
+		byte[] hashComputed = md5.ComputeHash(dataLoaded);
+		for(int i=0; i<16; i++)
+		{
+			if(hashLoaded[i] != hashComputed[i])
+			{
+				Debug.Log ("hashes do not match!");
+				return false;
+			}
+		}
 		Debug.Log ("dataLoaded.Length: " + dataLoaded.Length);
 		
 		uint fileVersionLoaded = BitConverter.ToUInt16(dataLoaded, index);
@@ -433,6 +495,8 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 				index += 2;
 			}
 		}
+		
+		return true;
 	}
 	
 	#endregion

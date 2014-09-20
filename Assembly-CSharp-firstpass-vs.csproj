@@ -104,8 +104,10 @@
      <Compile Include="Assets\Plugins\Soomla\Store\purchaseTypes\PurchaseWithMarket.cs" />
      <Compile Include="Assets\Plugins\Soomla\Store\purchaseTypes\PurchaseWithVirtualItem.cs" />
      <Compile Include="Assets\Plugins\Soomla\Store\rewards\VirtualItemReward.cs" />
+     <Compile Include="Assets\Plugins\UnbiasedTime\UnbiasedTime.cs" />
      <None Include="Assets\Vectrosity\Documentation\Vectrosity changelog.txt" />
      <None Include="Assets\Shaders\Mobile-Particle-Alpha - zwrite.shader" />
+     <None Include="Assets\Plugins\readme.txt" />
      <None Include="Assets\Plugins\Android\AndroidManifest.xml" />
      <None Include="Assets\Vectrosity\Documentation\Vectrosity Upgrade Guide.txt" />
  <Reference Include="Vectrosity">

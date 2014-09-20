@@ -165,6 +165,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	{
 		dm = DataManager.Instance;
 		gm = GUIManager.Instance;
+		tm = TutorialManager.Instance;
 		StoreEvents.OnMarketPurchase += onMarketPurchase;
 		StoreEvents.OnItemPurchased += onItemPurchased;
 		StoreEvents.OnGoodBalanceChanged += onGoodBalanceChanged;
@@ -188,7 +189,9 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	
 	void Start()
 	{
+		#if !UNITY_EDITOR
 		UpdateBalances();
+		#endif
 		foreach(Prize powerup in powerups)
 		{
 			if (powerup.powerupTimeRemaining > 0)
@@ -289,6 +292,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				OnRevive(prize);
 				prize.inventory--;
 				StoreInventory.TakeItem(Constants.REVIVE_ID, 1);
+				tm.TriggerTutorial(REVIVE_USED_TUT_ID);
 			}
 		
 		}
@@ -330,14 +334,14 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	private void UpdateBalances()
 	{
 		prizes[Constants.REVIVE_INDEX].inventory = StoreInventory.GetItemBalance(Constants.REVIVE_ID);
-//		prizes[0].inventory = 10;
-//		prizes[1].inventory = 10;
 	}
 	#endregion
 		
 	#region Private
 	private GUIManager gm;
 	private DataManager dm;
+	private TutorialManager tm;
+	private const int REVIVE_USED_TUT_ID = 22;
 	private float powerupRarirtyTotal = 0;
 	
 	private bool CheckForCompletePrize(Prize prize)
@@ -357,6 +361,11 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				piece.inventory--;
 			
 			prize.inventory++;
+			if (prize.name == Constants.REVIVE_NAME)
+			{
+				StoreInventory.GiveItem(Constants.REVIVE_ID, 1);
+				Debug.Log ("giving one revive");
+			}
 			
 			return true;
 		}

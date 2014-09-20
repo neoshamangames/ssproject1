@@ -137,7 +137,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tutorialPopup = true;
 		tutorialText = message;
 		checkboxChecked = false;
-		menuOpen = false;
+//		menuOpen = false;
 	}
 	#endregion
 	
@@ -265,6 +265,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		powerupTutorialDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_PIECE_TUTORIAL_ID)) == 2);
 		collectableTutorialDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", COLLECTABLE_PIECE_TUTORIAL_ID)) == 2);
 		prizeTutorialsDisplayed = (powerupTutorialDisplayed && collectableTutorialDisplayed);
+		storeTutorialDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", STORE_TUT_ID)) == 2);
         completePowerupTutorialDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_COMPLETE_TUTORIAL_ID)) == 2);
 		completeReviveTutorialDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", REVIVE_COMPLETE_TUTORIAL_ID)) == 2);
 		completeCollectableTutorialDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", COLLECTABLE_COMPLETE_TUTORIAL_ID)) == 2);
@@ -405,6 +406,9 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private const int COLLECTABLE_COMPLETE_TUTORIAL_ID = 15;
 	private const int GROW_FASTER_USED_TUT_ID = 16;
 	private const int DRY_SLOWER_USED_TUT_ID = 17;
+	private const int HAVE_REVIVE_TUT_ID = 19;
+	private const int NO_REVIVE_TUT_ID = 20;
+	private const int STORE_TUT_ID = 21;
 	private ItemManager im;
 	private CameraManager cm;
 	private AudioManager am;
@@ -463,7 +467,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float tutorialAcceptX, tutorialAcceptY, tutorialAcceptWidth, tutorialAcceptHeight, tutorialAcceptProportions;
 	private bool checkboxChecked;
 	private float tutorialAcceptTextX, tutorialAcceptTextY;
-	private bool prizeTutorialsDisplayed, powerupTutorialDisplayed, collectableTutorialDisplayed;
+	private bool prizeTutorialsDisplayed, powerupTutorialDisplayed, collectableTutorialDisplayed, storeTutorialDisplayed;
 	private bool completePrizeTutorialsDisplayed, completePowerupTutorialDisplayed, completeReviveTutorialDisplayed, completeCollectableTutorialDisplayed;
 	private bool growFasterUsedTutDisp, drySlowerUsedTutDisp, powerupsUsedTutsDisp;
 	private int collectablesPage = 0;
@@ -623,6 +627,12 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			menuOpen = !menuOpen;
 			prizePopup = false;
 			tutorialPopup = false;
+			
+			if (plant.state == Plant.PlantState.Dead && menuOpen)
+				if (im.powerups[Constants.REVIVE_INDEX].inventory > 0)
+					tm.TriggerTutorial(HAVE_REVIVE_TUT_ID);
+				else
+					tm.TriggerTutorial(NO_REVIVE_TUT_ID);
 		}
 	}
 	
@@ -655,6 +665,8 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			SoomlaStore.StartIabServiceInBg();
 			menuState = MenuState.SHOP;
 			lastMenuState = menuState;
+			if (!storeTutorialDisplayed)
+				tm.TriggerTutorial(STORE_TUT_ID);
 		}
 	}
 	

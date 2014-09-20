@@ -165,7 +165,7 @@ public class Stem : Object {
 		line.SetColor(color);
 	}
 	
-	public void Rotate(float angle)
+	public void RotateAndTranslate(float angle, Vector3 translation)
 	{
 		if (rightSide)
 			angle *= -1;
@@ -176,10 +176,10 @@ public class Stem : Object {
 			Vector3 point = line.points3[i];
 			float newX = pivot.x + (point.x-pivot.x)*Mathf.Cos(angleRad) - (point.y-pivot.y)*Mathf.Sin(angleRad);
 			float newY = pivot.y + (point.x-pivot.x)*Mathf.Sin(angleRad) + (point.y-pivot.y)*Mathf.Cos(angleRad);
-			line.points3[i] = new Vector3(newX, newY, pivot.z);
+			line.points3[i] = new Vector3(newX, newY, pivot.z) + translation;
 		}
-		flower.transform.localPosition = line.points3[endSegment];
-		flower.transform.localEulerAngles += new Vector3(0, 0, angle);
+		flower.transform.position = line.points3[endSegment];
+		flower.transform.eulerAngles += new Vector3(0, 0, angle);
 	}
 	#endregion
 	
