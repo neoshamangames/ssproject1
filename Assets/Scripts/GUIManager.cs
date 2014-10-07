@@ -31,7 +31,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public Texture tutorialFrame;
 	public Texture tutorialCheckbox;
 	public Texture tutorialCheck;
-	public Texture tutorialAcceptButton;
 	public Color activeMenuButtonTint;
 	public Color scoreColor;
 	public bool updateValuesInPlayMode = true;
@@ -101,6 +100,8 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 5)]public float prizeGrowTime = 1f;
 	public float awaredPieceShiftPercent = 0f;
 	public float tutorialFontSizeInverse = 20f;
+	public float okFontSizeInverse = 10f;
+	public float tutCheckTextSizeInverse = 20f;
 	[Range(0, 1)]public float tutorialFrameWidthPercent = .8f;
 	[Range(0, 1)]public float tutorialTextXPercent = .1f;
 	[Range(0, 1)]public float tutorialTextYPercent = .1f;
@@ -108,8 +109,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 1)]public float tutorialCheckboxXPercent, tutorialCheckboxYPercent, tutorialCheckboxSizePercent;
 	[Range(0, 1)]public float tutorialCheckXPercent, tutorialCheckYPercent, tutorialCheckSizePercent;
 	[Range(0, 1)]public float tutorialCheckTextXPercent, tutorialCheckTextYPercent;
-	[Range(0, 1)]public float tutorialAcceptXPercent, tutorialAcceptYPercent, tutorialAcceptWidthPercent;
-	[Range(0, 1)]public float tutorialAcceptTextXPercent, tutorialAcceptTextYPercent;
+	[Range(0, 1)]public float tutorialAcceptXPercent, tutorialAcceptYPercent, tutorialAcceptWidthPercent, tutorialAcceptHeightPercent;
 	#endregion
 	
 	#region Properties
@@ -131,13 +131,15 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		popupTimer = 0;
 	}
 	
-	public void TutorialPopup(string message)
+	public void TutorialPopup(string message, bool checkbox)
 	{
 		Debug.Log ("popup message: " + message);
 		tutorialPopup = true;
 		tutorialText = message;
 		checkboxChecked = false;
-//		menuOpen = false;
+		Debug.Log ("checkbox: " + checkbox);
+		drawCheckbox = checkbox;
+//		menuOpen = false;//TODO: dim menu while tutorial popup is open
 	}
 	#endregion
 	
@@ -148,6 +150,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		am = AudioManager.Instance;
 		cm = GetComponent<CameraManager>();
 		tm = TutorialManager.Instance;
+		dm = DataManager.Instance;
 		
 		ItemManager.OnPowerupActivated += OnPowerupActivated;
 		
@@ -210,6 +213,20 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tutorialStyle.alignment = TextAnchor.UpperLeft;
 		tutorialStyle.wordWrap = true;
 		
+		okStyle = new GUIStyle();
+		okStyle.font = font;
+		okStyle.fontSize = Mathf.RoundToInt(Screen.width / okFontSizeInverse);
+		okStyle.normal.textColor = Color.white;
+		okStyle.alignment = TextAnchor.UpperCenter;
+		okStyle.wordWrap = true;
+		
+		tutCheckTextStyle = new GUIStyle();
+		tutCheckTextStyle.font = font;
+		tutCheckTextStyle.fontSize = Mathf.RoundToInt(Screen.width / tutCheckTextSizeInverse);
+		tutCheckTextStyle.normal.textColor = Color.white;
+		tutCheckTextStyle.alignment = TextAnchor.UpperLeft;
+		tutCheckTextStyle.wordWrap = true;
+		
 		numberOfStoreItems = storeItems.Length;
 		productIDs = new string[] {Constants.REVIVE_3_PACK_ID, Constants.REVIVE_5_PACK_ID, Constants.REVIVE_10_PACK_ID, Constants.REVIVE_15_PACK_ID};
 		storeItemY = new float[numberOfStoreItems];
@@ -225,7 +242,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		frameProportions = (float)frame.width/(float)frame.height;
 		tabProportions = (float)tabPowerups.width/(float)tabPowerups.height;
 		tutorialFrameProportions = (float)tutorialFrame.width/(float)tutorialFrame.height;
-		tutorialAcceptProportions = (float)tutorialAcceptButton.width/(float)tutorialAcceptButton.height;
 		
 		tabButtonXs = new float[3];
 		
@@ -272,6 +288,9 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		completePrizeTutorialsDisplayed = (completePowerupTutorialDisplayed && completeReviveTutorialDisplayed && completeCollectableTutorialDisplayed);
 		growFasterUsedTutDisp = (PlayerPrefs.GetInt(string.Format("tut{0}", GROW_FASTER_USED_TUT_ID)) == 2);
 		drySlowerUsedTutDisp = (PlayerPrefs.GetInt(string.Format("tut{0}", DRY_SLOWER_USED_TUT_ID)) == 2);
+		powerupsMenuTutNotDisp = !(PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_MENU_TUT_ID)) == 2);
+		Debug.Log ("playerprefs value: " + PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_MENU_TUT_ID)));
+		Debug.Log ("powerupsMenuTutNotDisp: " + powerupsMenuTutNotDisp);
 		powerupsUsedTutsDisp = (growFasterUsedTutDisp && powerupsUsedTutsDisp);
 		
 		numberOfCollectables = im.collectables.Count;
@@ -409,15 +428,17 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private const int HAVE_REVIVE_TUT_ID = 19;
 	private const int NO_REVIVE_TUT_ID = 20;
 	private const int STORE_TUT_ID = 21;
+	private const int POWERUP_MENU_TUT_ID = 27;
 	private ItemManager im;
 	private CameraManager cm;
 	private AudioManager am;
 	private TutorialManager tm;
+	private DataManager dm;
 	private MenuState menuState, lastMenuState = MenuState.POWERUPS;
 	private float height, width;
 	private float centerX, centerY;
 	private bool menuOpen;
-	private GUIStyle buttonStyle, labelStyle, creditsStyle, quanitityStyle, multiplierStyle, scoreStyle, tutorialStyle;
+	private GUIStyle buttonStyle, labelStyle, creditsStyle, quanitityStyle, multiplierStyle, scoreStyle, tutorialStyle, okStyle, tutCheckTextStyle;
 	private float frameX, frameWidth, frameHeight, frameProportions;
 	private float tabY, tabButtonY, tabButtonWidth, tabButtonHeight, tabHeight, tabProportions;
 	private float[] tabButtonXs;
@@ -464,17 +485,20 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float tutorialCheckboxX, tutorialCheckboxY, tutorialCheckboxSize;
 	private float tutorialCheckX, tutorialCheckY, tutorialCheckSize;
 	private float tutorialCheckTextX, tutorialCheckTextY;
-	private float tutorialAcceptX, tutorialAcceptY, tutorialAcceptWidth, tutorialAcceptHeight, tutorialAcceptProportions;
-	private bool checkboxChecked;
+	private float tutorialAcceptX, tutorialAcceptY, tutorialAcceptWidth, tutorialAcceptHeight;
+	private bool drawCheckbox, checkboxChecked;
 	private float tutorialAcceptTextX, tutorialAcceptTextY;
 	private bool prizeTutorialsDisplayed, powerupTutorialDisplayed, collectableTutorialDisplayed, storeTutorialDisplayed;
 	private bool completePrizeTutorialsDisplayed, completePowerupTutorialDisplayed, completeReviveTutorialDisplayed, completeCollectableTutorialDisplayed;
 	private bool growFasterUsedTutDisp, drySlowerUsedTutDisp, powerupsUsedTutsDisp;
+	private bool powerupsMenuTutNotDisp = true;
 	private int collectablesPage = 0;
 	private	int numberOfCollectables;
 	private float collectablesStartY, collectablesFinishY;
 	private float[] collectablesY;
 	private float pageButtonSize, pageButtonsY, prevPageX, nextPageX;
+	private float secretButtonX1, secretButtonX2, secretButtonY, secretButtonHeight, secretButtonWidth;
+	private int secretButtonStep = 0;
 	
 	private bool GUIButtonTexture( Rect r, Texture t)
 	{
@@ -615,9 +639,13 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tutorialAcceptX = Mathf.RoundToInt(tutorialAcceptXPercent * width);
 		tutorialAcceptY = Mathf.RoundToInt(tutorialAcceptYPercent * height);
 		tutorialAcceptWidth = Mathf.RoundToInt(tutorialAcceptWidthPercent * width);
-		tutorialAcceptHeight = Mathf.RoundToInt(tutorialAcceptWidth/tutorialAcceptProportions);
-		tutorialAcceptTextX = Mathf.RoundToInt(tutorialAcceptTextXPercent * width);
-		tutorialAcceptTextY = Mathf.RoundToInt(tutorialAcceptTextYPercent * height);
+		tutorialAcceptHeight = Mathf.RoundToInt(tutorialAcceptHeightPercent * height);
+		
+		secretButtonWidth = width * .12f;
+		secretButtonHeight = height * .07f;
+		secretButtonX1= centerX + width * .375f - secretButtonWidth/2;
+		secretButtonX2= centerX - width * .375f - secretButtonWidth/2;
+		secretButtonY = height * .11f;
 	}
 	
 	private void DrawMenuButton()
@@ -626,13 +654,25 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		{
 			menuOpen = !menuOpen;
 			prizePopup = false;
-			tutorialPopup = false;
+			//TODO: dim if tutorial is open
 			
-			if (plant.state == Plant.PlantState.Dead && menuOpen)
-				if (im.powerups[Constants.REVIVE_INDEX].inventory > 0)
-					tm.TriggerTutorial(HAVE_REVIVE_TUT_ID);
-				else
-					tm.TriggerTutorial(NO_REVIVE_TUT_ID);
+			Debug.Log ("buton pressed");
+			
+			if (menuOpen)
+			{
+				if (powerupsMenuTutNotDisp)
+				{
+					tm.TriggerTutorial(POWERUP_MENU_TUT_ID);
+					powerupsMenuTutNotDisp = false;
+					plant.openMenuTutorialNotDisplayed = false;
+				}
+			
+				if (plant.state == Plant.PlantState.Dead)
+					if (im.powerups[Constants.REVIVE_INDEX].inventory > 0)
+						tm.TriggerTutorial(HAVE_REVIVE_TUT_ID);
+					else
+						tm.TriggerTutorial(NO_REVIVE_TUT_ID);
+			}
 		}
 	}
 	
@@ -681,6 +721,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		{
 			SoomlaStore.StopIabServiceInBg();
 			menuState = MenuState.CREDITS;
+			secretButtonStep = 0;
 		}
 	}
 	
@@ -713,32 +754,14 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			{
 				if (GUIButtonTexture(new Rect(iconX, yCoordinate, iconSize, iconSize), prize.multipleTexture))
 				{
-					im.Activate(prize);
-					
-					if (!powerupsUsedTutsDisp)
-					{
-						if (prize.name == Constants.DRY_SLOWER_NAME)
-						{
-							tm.TriggerTutorial(DRY_SLOWER_USED_TUT_ID);
-							drySlowerUsedTutDisp = true;
-							if (growFasterUsedTutDisp == true)
-								powerupsUsedTutsDisp = true;
-						}
-						else if (prize.name == Constants.GROW_FASTER_NAME)
-						{
-							tm.TriggerTutorial(GROW_FASTER_USED_TUT_ID);
-							if (drySlowerUsedTutDisp == true)
-								powerupsUsedTutsDisp = true;
-						}
-						menuOpen = false;
-					}
+					ActivatePowerup(prize);
 				}
 				GUI.Label(new Rect(iconMultiplierX, yCoordinate + iconMultiplierYOffset, iconSize, iconSize), prizeInv.ToString(), quanitityStyle);
 			}
 			else
 			{
 				if (GUIButtonTexture(new Rect(iconX, yCoordinate, iconSize, iconSize), prize.texture))
-					im.Activate(prize);
+					ActivatePowerup(prize);
 			}
 		}
 			
@@ -758,6 +781,31 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			else
 			{
 				GUI.DrawTexture(new Rect(pieceX[i], yCoordinate + pieceYOffset[i], iconSize, iconSize), piece.offTexture);
+			}
+		}
+	}
+	
+	private void ActivatePowerup(ItemManager.Prize powerup)
+	{
+		im.Activate(powerup);
+		menuOpen = false;
+		
+		if (!powerupsUsedTutsDisp)
+		{
+			if (powerup.name == Constants.DRY_SLOWER_NAME)
+			{
+				tm.TriggerTutorial(DRY_SLOWER_USED_TUT_ID);
+				drySlowerUsedTutDisp = true;
+				if (growFasterUsedTutDisp == true)
+					powerupsUsedTutsDisp = true;
+			}
+			else if (powerup.name == Constants.GROW_FASTER_NAME)
+			{
+				tm.SetDontShowAgain(POWERUP_MENU_TUT_ID);
+				
+				tm.TriggerTutorial(GROW_FASTER_USED_TUT_ID);
+				if (drySlowerUsedTutDisp == true)
+					powerupsUsedTutsDisp = true;
 			}
 		}
 	}
@@ -827,6 +875,73 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private void DrawCredits()
 	{
 		GUI.Label(new Rect(creditsX, creditsY, width, height), creditsText, creditsStyle);
+		if (GUI.Button(new Rect(secretButtonX1, secretButtonY, secretButtonWidth, secretButtonHeight), "", buttonStyle))
+		{
+			ProcessSecretButton(1);
+		}
+		if (GUI.Button(new Rect(secretButtonX2, secretButtonY, secretButtonWidth, secretButtonHeight), "", buttonStyle))
+		{
+			ProcessSecretButton(0);
+		}
+	}
+	
+	private void ProcessSecretButton(int buttonPressed)
+	{
+		switch (buttonPressed)
+		{
+		case 0:
+			switch (secretButtonStep)
+			{
+			case 0:
+			case 2:
+			case 3:
+			case 6:
+			case 7:
+			case 8:
+			case 12:
+			case 13:
+			case 14:
+			case 15:
+				secretButtonStep++;
+				break;
+			default:
+				secretButtonStep = 0;
+				break;
+			}
+			break;
+		case 1:
+			switch (secretButtonStep)
+			{
+			case 1:
+			case 4:
+			case 5:
+			case 9:
+			case 10:
+			case 11:
+			case 16:
+			case 17:
+			case 18:
+				secretButtonStep++;
+				break;
+			case 19:
+				secretButtonStep = 0;
+				ResetEverything();
+				break;
+			default:
+				secretButtonStep = 0;
+				break;
+			}
+			break;
+		}
+		Debug.Log ("step: " + secretButtonStep);
+	}
+	
+	private void ResetEverything()
+	{
+		im.Reset();
+		tm.ResetStates();
+		plant.Reset();
+		dm.DeleteFile();
 	}
 	
 	private void DrawPrizePopup()
@@ -923,17 +1038,22 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	{
 		GUI.DrawTexture(new Rect(centerX - tutorialFrameWidth/2, centerY - tutorialFrameHeight/2, tutorialFrameWidth, tutorialFrameHeight), tutorialFrame);
 		GUI.Label(new Rect(tutorialTextX, tutorialTextY, tutorialTextWidth, height), tutorialText, tutorialStyle);
-		if (GUIButtonTexture(new Rect(tutorialCheckboxX, tutorialCheckboxY, tutorialCheckboxSize, tutorialCheckboxSize), tutorialCheckbox))
-			checkboxChecked = !checkboxChecked;
-		GUI.Label(new Rect(tutorialCheckTextX, tutorialCheckTextY, 1000, 400), "Don't tell me again", tutorialStyle);
-		if (checkboxChecked)
-			GUI.DrawTexture(new Rect(tutorialCheckX, tutorialCheckY, tutorialCheckSize, tutorialCheckSize), tutorialCheck);
-		if (GUIButtonTexture(new Rect(tutorialAcceptX, tutorialAcceptY, tutorialAcceptWidth, tutorialAcceptHeight), tutorialAcceptButton))
+		
+		if (drawCheckbox)
+		{
+			if (GUIButtonTexture(new Rect(tutorialCheckboxX, tutorialCheckboxY, tutorialCheckboxSize, tutorialCheckboxSize), tutorialCheckbox))
+				checkboxChecked = !checkboxChecked;
+			GUI.Label(new Rect(tutorialCheckTextX, tutorialCheckTextY, 1000, 400), "check to never show again", tutCheckTextStyle);
+			
+			if (checkboxChecked)
+				GUI.DrawTexture(new Rect(tutorialCheckX, tutorialCheckY, tutorialCheckSize, tutorialCheckSize), tutorialCheck);
+		}
+		
+		if (GUI.Button(new Rect(tutorialAcceptX, tutorialAcceptY, tutorialAcceptWidth, tutorialAcceptHeight), "ok", okStyle))
 		{
 			tm.DismissTutorial(checkboxChecked);
 			tutorialPopup = false;
 		}
-		GUI.Label(new Rect(tutorialAcceptTextX, tutorialAcceptTextY, 1000, 400), "Gotcha", tutorialStyle);
 	}
 	#endregion
 }

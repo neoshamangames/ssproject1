@@ -46,6 +46,7 @@ public class Cloud : MonoBehaviour {
 		cloudCam = CloudCamera.Instance.camera;
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
+		tm = TutorialManager.Instance;
 				
 		transform.localScale = new Vector3(startSize, startSize, 1);
 		spriteRenderer = GetComponent<SpriteRenderer>();
@@ -56,6 +57,9 @@ public class Cloud : MonoBehaviour {
 		screenHeight = cloudCam.ViewportToWorldPoint(new Vector3(0, 1, distanceFromCam)).y - cloudCam.ViewportToWorldPoint(new Vector3(0, 0, distanceFromCam)).y;
 		growthRate = (maxSize - minSize) / (useDebugRefillTime ? debugRefillTime : releaseRefillTime);
 		depletionRate = (maxSize - minSize) / depletionTime;
+		
+		cloudDepletedTutDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", CLOUD_DEPLETED_TUT_ID)) == 2);
+		
 	}
 	
 	void Start()
@@ -66,8 +70,10 @@ public class Cloud : MonoBehaviour {
 	void Update()
 	{
 		max = plant.TopPosisiton.y;
-		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton + cloudOffset);
-		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos);
+//		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton + cloudOffset);
+//		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos);
+		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton);
+		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos + cloudOffset);
 		prevYPos = cloudScreenPos.y;
 		currentScale = transform.localScale;
 		cloudPercentage = currentScale.x/maxSize;
@@ -98,6 +104,11 @@ public class Cloud : MonoBehaviour {
 			ScaleCloud(rain);
 			plant.Water(deltaTime / depletionTime);
 		}
+		else if (!cloudDepletedTutDisplayed)
+		{
+			tm.TriggerTutorial(CLOUD_DEPLETED_TUT_ID);
+			cloudDepletedTutDisplayed = true;
+		}
 		
 	}
 	
@@ -108,9 +119,11 @@ public class Cloud : MonoBehaviour {
 	#endregion
 	
 	#region Private
+	private const int CLOUD_DEPLETED_TUT_ID = 1;
 	private Camera cloudCam;
 	private Camera mainCam;
 	private DataManager dm;
+	private TutorialManager tm;
 	private float screenHeight;
 	private Vector3 cloudScreenPos;
 	private const int MAX_RAIN_DROPS = 500;
@@ -126,6 +139,7 @@ public class Cloud : MonoBehaviour {
 	private float prevYPos;
 	private float max;
 	private float growthRate, depletionRate;
+	private bool cloudDepletedTutDisplayed;
 	
 	private void ScaleCloud(float scale)
 	{

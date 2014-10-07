@@ -22,10 +22,6 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	[System.NonSerialized]public List<Prize> powerups;
 	[System.NonSerialized]public List<Prize> collectables;
 	[Range(0,1)]public float chanceOfPowerup = .5f;
-	public float growFasterTime;
-	[Range(1,3)]public float growFasterMultiplier = 1.5f;
-	public float drySlowerTime;
-	[Range(0,1)]public float drySlowerMultiplier = .5f;
 	
 	#if UNITY_EDITOR
 	[CustomPropertyDrawer (typeof(Prize))]
@@ -246,6 +242,36 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 	#endregion
 	
 	#region Actions
+	public void Reset()
+	{
+		foreach(Prize prize in prizes)
+		{
+			prize.inventory = 0;
+			foreach(Piece piece in prize.pieces)
+				piece.inventory = 0;	
+		}
+		
+		prizes[0].inventory = 1;
+		
+		powerups = new List<Prize>();
+		collectables = new List<Prize>();
+		foreach(Prize prize in prizes)
+		{
+			if (prize.type == Type.Powerup)
+			{
+				powerupRarirtyTotal += prize.rarity;
+				prize.powerupValue = 1f;
+				powerups.Add(prize);
+			}
+			else
+			{
+				collectables.Add(prize);
+			}
+		}
+		
+		
+	}
+	
 	public void AwardPrize()
 	{
 		bool powerupSelected = (Random.Range(0.0f, 1.0f) < chanceOfPowerup);
