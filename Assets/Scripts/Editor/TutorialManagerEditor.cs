@@ -12,9 +12,8 @@ public class TutorialManagerEditor : Editor {
 		
 		if(GUILayout.Button("Reset 'Don't Show Again' states"))
 		{
-			int mute = PlayerPrefs.GetInt("mute");
-			PlayerPrefs.DeleteAll();
-			PlayerPrefs.SetInt("mute", mute);
+			TutorialManager tm = (TutorialManager)target;
+			tm.ResetStates();
 		}
 	}
 	#endregion

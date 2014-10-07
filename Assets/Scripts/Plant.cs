@@ -40,7 +40,9 @@ public class Plant : MonoBehaviour {
 	
 	[System.Serializable]
 	public class GrowthAttributes {
-		[Range(0, 20)] public float preGrowth = 0f;
+		[Range(0, 1)]public float initialSaturation = .5f;
+		public float sproutingGrowthFactor = 1f;
+		public float sproutingTime;
 		[Range(0, 20)] public float maxGrowthPerSecond = 1f;
 		[Range(5, 1000)]public int segmentsPerScreen = 500;
 		[Range(0,1)]public float healthyGrowthFactor = .5f;
@@ -118,8 +120,9 @@ public class Plant : MonoBehaviour {
 	public AppearanceAttributes appearance;
 	public BezierCurveAttributes bezier;
 	public SplineAttributes spline;
-	public float welcomeMessageDelay;
 	public float panZoomTutorialDelay;
+	public float waterTutorialDelay;
+	public float openMenuTutorialDelay;
 	
 	#if UNITY_EDITOR
 	public bool noDehydrationDuringCatchup;
@@ -130,6 +133,7 @@ public class Plant : MonoBehaviour {
 	#region Public
 	public enum PlantState {Dead, Drowning, HealthyWet, VeryHealthy, HealthyDry, Withering};
 	[System.NonSerialized]public PlantState state = PlantState.VeryHealthy;
+	[System.NonSerialized] public bool openMenuTutorialNotDisplayed;
 	#endregion
 	
 	#region Properties
@@ -337,6 +341,8 @@ public class Plant : MonoBehaviour {
 		stemParent.name = "stems";
 		lineParent.name = "lines";
 		
+		openMenuTutorialNotDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_MENU_TUT_ID)) == 0);
+		
 		Initialize();
 	}
 
@@ -510,6 +516,8 @@ public class Plant : MonoBehaviour {
 
 	#region Private
 	private const int WELCOME_FIRST_TUT_ID = 0;
+	private const int WATER_TUT_ID = 25;
+	private const int OPEN_MENU_TUT_ID = 26;
 	private const int ZOOM_PAN_TUT_ID = 18;
 	private const int WELCOME_BACK_TUT_ID = 23;
 	private const int STEM_SPROUTING_TUT_ID = 5;
@@ -519,10 +527,12 @@ public class Plant : MonoBehaviour {
 	private const int VERY_HEALTHY_TUT_ID = 12;
 	private const int HEALTHY_WET_TUT_ID = 11;
 	private const int DROWNING_TUT_ID = 4;
+	private const int POWERUP_MENU_TUT_ID = 27;
 	
 	private const int MAX_POINTS_PER_LINE = 5000;
 	private const float DROP_BACK_PERCENT = .98f;
 	private float HEIGHT_MULTIPLIER = 10f;
+	
 	private float growthFactor = 1f;
 	
 	
@@ -563,7 +573,7 @@ public class Plant : MonoBehaviour {
 	private bool currentLineFound;
 	
 	private const float OPTIMUM_SATURATION = .5f;
-	private float saturation = OPTIMUM_SATURATION;
+	private float saturation;
 	private float healthyWetThreshold;
 	private float healthyDryThreshold;
 	private float drowningThreshold;
@@ -659,7 +669,6 @@ public class Plant : MonoBehaviour {
 		}
 		if(!reset && dm.curvePointsLoaded.Count > 0)
 		{
-			tm.TriggerTutorial(WELCOME_BACK_TUT_ID);
 			LoadCurves();
 			finishPoint = lines[lines.Count - 1].points3[lastSegments[lines.Count - 1]];
 			
@@ -674,6 +683,8 @@ public class Plant : MonoBehaviour {
 			CatchupStems();
 			cam.CatchupBackground();
 			DrawAllLines();
+			tm.TriggerTutorial(WELCOME_BACK_TUT_ID);
+			StartCoroutine(TriggerTutorialAfterDelay(ZOOM_PAN_TUT_ID, panZoomTutorialDelay));
 		}
 		else
 		{
@@ -685,11 +696,12 @@ public class Plant : MonoBehaviour {
 			NewLine(false);
 			UpdateWidth();
 			dm.SaveData();
-			state = PlantState.VeryHealthy;
-			growthFactor = 1;
-			saturation = OPTIMUM_SATURATION;
-			currentDryPerSecond = growth.dryPerSecond;
-			height = growth.preGrowth;
+			
+			saturation = growth.initialSaturation;
+			FindState();
+			UpdateState();
+			growthFactor = growth.sproutingGrowthFactor;
+			
 			int intPart = Mathf.FloorToInt(height);
 			lowPoint = lines[0].points3[intPart];
 			highPoint = lines[0].points3[intPart + 1];
@@ -697,8 +709,9 @@ public class Plant : MonoBehaviour {
 				lines[lineIndex].points3[intPart] = Vector3.Lerp(lines[lineIndex].points3[intPart - 1], lines[lineIndex].points3[intPart], DROP_BACK_PERCENT);
 			UpdateWidth();
 			lowestLineToDraw = 0;
-			StartCoroutine("DisplayWelcomeMessage");
-			StartCoroutine("DisplayZoomPanTutorial");
+			StartCoroutine("Sprout");
+			
+			//TODO: only set this if they have a boost to use
 		}
 		
 	}
@@ -781,9 +794,6 @@ public class Plant : MonoBehaviour {
 		
 		PlantState periodState, nextState = state;
 		
-//		Debug.Log ("boostTimer: " + boostTimer);
-//		Debug.Log ("slowTimer: " + slowTimer);
-		
 		do
 		{
 			//the following statement do nothing the first iteration
@@ -813,7 +823,6 @@ public class Plant : MonoBehaviour {
 			slowTimer -= secondsToNextPeriod;
 			if (boostTimer <= 0)
 			{
-//				Debug.Log ("boostTimer: " + boostTimer);
 				boostTimer = 0;
 				growMultiplier = 1;
 				im.powerups[0].powerupValue = 1;
@@ -878,15 +887,23 @@ public class Plant : MonoBehaviour {
 			#endif
 			periodGrowthFactor *= growMultiplier;
 			
-			float lowestTimer = Mathf.Min(boostTimer, slowTimer);
-			if (lowestTimer == 0 || secondsToNextState < lowestTimer)
+			float lowestActiveTimer = 0;
+			if (boostTimer > 0)
+				if (slowTimer > 0)
+					lowestActiveTimer = Mathf.Min(boostTimer, slowTimer);
+				else
+					lowestActiveTimer = boostTimer;
+			else
+				lowestActiveTimer = slowTimer;
+					
+			if (lowestActiveTimer == 0 || secondsToNextState < lowestActiveTimer)
 			{
 				secondsToNextPeriod = secondsToNextState;
 				saturationThisPeriod = saturationToNextState;
 			}
 			else
 			{
-				secondsToNextPeriod = lowestTimer;
+				secondsToNextPeriod = lowestActiveTimer;
 				nextState = periodState;
 				saturationThisPeriod = secondsToNextPeriod * stateDryPerSecond * dryMultiplier;
 			}
@@ -896,7 +913,7 @@ public class Plant : MonoBehaviour {
 			else if (periodState == PlantState.Withering)
 				witheringSeconds += Mathf.Min(secondsToNextState, secondsRemaining);
 			
-//			Debug.Log ("secondsToNextPeriod: " + secondsToNextPeriod + ", saturationThisPeriod: " + saturationThisPeriod);
+			Debug.Log ("secondsToNextPeriod: " + secondsToNextPeriod + ", secondsRemaining: " + secondsRemaining);
 //			Debug.Log ("secondsToNextState: " + secondsToNextState + ", saturationRemaining: " + saturationRemaining + ", saturationToNextState: " + saturationToNextState);
 //			Debug.Log ("periodState: " + periodState + ", periodGrowthFactor: " + periodGrowthFactor + ", secondsToNextState: " + secondsToNextState + ", secondsRemaining: " + secondsRemaining);
 		}
@@ -908,6 +925,7 @@ public class Plant : MonoBehaviour {
 		catchupGrowth = newGrowth;
 		float heightToAdd = newGrowth * growth.maxGrowthPerSecond;
 
+		Debug.Log ("adding growth: " + newGrowth * growth.maxGrowthPerSecond);
 		totalHeight = newGrowth * growth.maxGrowthPerSecond + height;
 		totalSeconds += secondsRemaining;
 		
@@ -944,13 +962,11 @@ public class Plant : MonoBehaviour {
 		int totalSegments = lastSegments[lineIndex];
 		while (intPart > totalSegments)
 		{
-			Debug.Log("adding new line in AddHeight");
-			Debug.Log ("lastSegment: " + lastSegment);
+//			Debug.Log("adding new line in AddHeight");
 			currentLineBaseHeight += lastSegment;
 			NewLine(false);
 			lines[lineIndex].endCap = null;
 			lines[lineIndex].drawEnd = lastSegments[lineIndex];
-			Debug.Log ("lineIndex: " + lineIndex + ", drawEnd: " + lines[lineIndex].drawEnd);
 			lineIndex++;
 			lastSegment = lastSegments[lineIndex];
 			totalSegments += lastSegment;
@@ -1106,7 +1122,6 @@ public class Plant : MonoBehaviour {
 				for(int n=0; n<widths.Length; n++)
 					widths[n] = maxWidth;
 				lines[i].SetWidths(widths);
-				Debug.Log ("setting to max witdh of line: " + i);
 			}
 		}
 	}
@@ -1335,6 +1350,11 @@ public class Plant : MonoBehaviour {
 				growthFactor = 1;
 				currentDryPerSecond = growth.dryPerSecond;
 				tm.TriggerTutorial(VERY_HEALTHY_TUT_ID);
+				if (openMenuTutorialNotDisplayed)
+				{
+					StartCoroutine(TriggerTutorialAfterDelay(OPEN_MENU_TUT_ID, openMenuTutorialDelay));
+					openMenuTutorialNotDisplayed = false;
+				}
 				break;
 			}
 			
@@ -1445,6 +1465,7 @@ public class Plant : MonoBehaviour {
 		lines[lineIndex].SetWidths(widths);
 	}
 	
+	/*
 	private void HalvePoints(VectorLine line)
 	{
 		Debug.Log ("halving points of line");
@@ -1460,6 +1481,7 @@ public class Plant : MonoBehaviour {
 		line.drawEnd = line.points3.Length;
 		line.Draw3D();
 	}
+	*/
 	
 	private void PopulateWidthsPrevious()
 	{
@@ -1555,7 +1577,6 @@ public class Plant : MonoBehaviour {
 	private void UpdateSaturation()
 	{
 		saturation -= currentDryPerSecond * Time.deltaTime * im.DryMultiplier;
-//		Debug.Log ("saturation: " + saturation);
 		switch (state)
 		{
 			case PlantState.Drowning:
@@ -1695,6 +1716,8 @@ public class Plant : MonoBehaviour {
 
 	private void NewStem(Vector3[] curveLoaded=null, float growthLoaded=0, int indexLoaded = 0, ushort heightLoaded=0)
 	{
+	
+		Debug.Log ("NewStem");
 		int h = 0;
 		int l = 0;
 		float plantWidth = appearance.minWidth;
@@ -1830,16 +1853,20 @@ public class Plant : MonoBehaviour {
 		dm.RemoveStem(dyingStemIndex);
 	}
 	
-	private IEnumerator DisplayWelcomeMessage()
+	private IEnumerator Sprout()
 	{
-		yield return new WaitForSeconds(welcomeMessageDelay);
+		yield return new WaitForSeconds(growth.sproutingTime);
+		growthFactor = growth.healthyGrowthFactor;
 		tm.TriggerTutorial(WELCOME_FIRST_TUT_ID);
+		StartCoroutine(TriggerTutorialAfterDelay(ZOOM_PAN_TUT_ID, panZoomTutorialDelay));
+		StartCoroutine(TriggerTutorialAfterDelay(WATER_TUT_ID, waterTutorialDelay));
 	}
 	
-	private IEnumerator DisplayZoomPanTutorial()
+	private IEnumerator TriggerTutorialAfterDelay(int tutorialID, float delay)
 	{
-		yield return new WaitForSeconds(panZoomTutorialDelay);
-		tm.TriggerTutorial(ZOOM_PAN_TUT_ID);
+		yield return new WaitForSeconds(delay);
+		tm.TriggerTutorial(tutorialID);
+		Debug.Log ("triggering: " + tutorialID);
 	}
 	#endregion
 }

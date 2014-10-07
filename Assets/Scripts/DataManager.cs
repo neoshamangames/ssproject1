@@ -67,6 +67,14 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	
 	#region Actions
 	
+	public void DeleteFile(string path=null)
+	{
+		if (path == null)
+			File.Delete(filePath);
+		else
+			File.Delete(path);
+	}
+	
 	public void Reset()
 	{
 		numberOfCurves = 0;
@@ -328,7 +336,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		#endif
 		TimeSpan ts = now.Subtract(timeLoaded);
 		secondsSinceSave = ts.TotalSeconds;
-		Debug.Log ("secondsSinceSave: " + secondsSinceSave);
 		#if UNITY_EDITOR
 		if (overrideAdvanceTime)
 			secondsSinceSave = secondsToAdvance;

@@ -10,6 +10,7 @@ public class DataManagerEditor : Editor {
 	void Awake()
 	{
 		filePath = Application.persistentDataPath + "/saplings.data";
+		dm = (DataManager)target;
 	}
 	
 	public override void OnInspectorGUI()
@@ -17,15 +18,16 @@ public class DataManagerEditor : Editor {
 		DrawDefaultInspector();
 		
 		
-		
 		if(GUILayout.Button("Delete Save File"))
 		{
-			File.Delete(filePath);
+			Debug.Log ("filePath: " + filePath);
+			dm.DeleteFile(filePath);
 		}
 	}
 	#endregion
 	
 	#region Private
 	string filePath;
+	DataManager dm;
 	#endregion
 }

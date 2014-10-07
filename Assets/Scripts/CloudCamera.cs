@@ -9,10 +9,5 @@ public class CloudCamera : SingletonMonoBehaviour<CloudCamera> {
 		cloudCam.clearFlags = CameraClearFlags.Depth;
 	}
 	
-	// Update is called once per frame
-	void Update () {
-	
-	}
-	
 	Camera cloudCam;
 }
