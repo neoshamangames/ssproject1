@@ -64,7 +64,10 @@
      <Compile Include="Assets\Scripts\SinMover.cs" />
      <Compile Include="Assets\Scripts\SingletonMonoBehaviour.cs" />
      <Compile Include="Assets\Scripts\SoomlaInit.cs" />
+     <Compile Include="Assets\Scripts\SoundManager.cs" />
+     <Compile Include="Assets\Scripts\SplashScreenManager.cs" />
      <Compile Include="Assets\Scripts\Stem.cs" />
+     <Compile Include="Assets\Scripts\TitleManager.cs" />
      <Compile Include="Assets\Scripts\TutorialManager.cs" />
      <Compile Include="Assets\Scripts\letter.cs" />
      <None Include="Assets\Vectrosity\Documentation\Vectrosity changelog.txt" />

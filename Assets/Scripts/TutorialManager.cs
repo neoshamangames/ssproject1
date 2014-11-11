@@ -81,9 +81,11 @@ public class TutorialManager : SingletonMonoBehaviour<TutorialManager> {
 	
 	public void ResetStates()
 	{
-		int mute = PlayerPrefs.GetInt("mute");
+		int musicMute = PlayerPrefs.GetInt("musicMute");
+		int sfxMute = PlayerPrefs.GetInt("sfxMute");
 		PlayerPrefs.DeleteAll();
-		PlayerPrefs.SetInt("mute", mute);
+		PlayerPrefs.SetInt("musicMute", musicMute);
+		PlayerPrefs.SetInt("sfxMute", sfxMute);
 	}
 	#endregion
 

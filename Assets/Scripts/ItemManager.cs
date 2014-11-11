@@ -288,6 +288,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			if (selection < selectedPrize.rarity)
 			{
 				int piece;
+				#if EASYCOLLECTIBLES
 				if (powerupSelected)
 				{
 					piece = Random.Range(0, selectedPrize.pieces.Length);
@@ -298,6 +299,9 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 					int selectedPieceIndex = Random.Range(0, piecesIndices.Length);
 					piece = piecesIndices[selectedPieceIndex];
 				}
+				#else
+				piece = Random.Range(0, selectedPrize.pieces.Length);
+				#endif
 				selectedPrize.pieces[piece].inventory++;
 				bool complete = CheckForCompletePrize(selectedPrize);
 				if (!powerupSelected)
@@ -309,7 +313,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 		}
 	}
 	
-	public void Activate(Prize prize)
+	public bool Activate(Prize prize)
 	{
 		if (plant.state == Plant.PlantState.Dead)
 		{
@@ -319,6 +323,7 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				prize.inventory--;
 				StoreInventory.TakeItem(Constants.REVIVE_ID, 1);
 				tm.TriggerTutorial(REVIVE_USED_TUT_ID);
+				return true;
 			}
 		
 		}
@@ -330,9 +335,10 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 				prize.powerupTimeRemaining += prize.powerupActiveTime;
 				prize.inventory--;
 				OnPowerupActivated(prize);
+				return true;
 			}
 		}
-		
+		return false;
 	}
 	#endregion
 	

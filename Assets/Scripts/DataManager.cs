@@ -262,6 +262,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		
 		//*collectables: number stored (2 bytes); for each: index (2 bytes), quantity (2 bytes), piece quantities (2 bytes each)
 		ushort numOfCollectablesToStore = (ushort)collectablesToStore.Count;
+		Debug.Log ("numOfCollectablesToStore: " + numOfCollectablesToStore);
 		byte[] numOfCollectablesToStoreBytes = BitConverter.GetBytes(numOfCollectablesToStore);
 		data.Add(numOfCollectablesToStoreBytes[0]);
 		data.Add(numOfCollectablesToStoreBytes[1]);
@@ -277,8 +278,10 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			data.Add(quantityBytes[1]);
 			
 			int numberOfPieces = im.collectables[collectableIndex].pieces.Length;
+			Debug.Log ("numberOfPieces: " + numberOfPieces);
 			for(int p=0; p<numberOfPieces; p++)
 			{
+				Debug.Log ("inventory: " + (uint)im.collectables[collectableIndex].pieces[p].inventory);
 				byte[] pieceQuantityBytes =  BitConverter.GetBytes((uint)im.collectables[collectableIndex].pieces[p].inventory);
 				data.Add(pieceQuantityBytes[0]);
 				data.Add(pieceQuantityBytes[1]);
@@ -501,6 +504,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 				im.collectables[colIndex].pieces[p].inventory = BitConverter.ToUInt16(dataLoaded, i*4 + 4 + index);
 				index += 2;
 			}
+			StoreCollectableIndex((ushort)colIndex);
 		}
 		
 		return true;
