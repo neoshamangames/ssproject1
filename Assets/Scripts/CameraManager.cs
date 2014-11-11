@@ -66,6 +66,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
 		tm = TutorialManager.Instance;
+		gm = GUIManager.Instance;
 		
 		lineMinWidth = plant.appearance.minWidth;
 		lineMaxWidth = plant.appearance.maxWidth;
@@ -137,6 +138,14 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		}
 		prevPlantY = plantY;
 
+		if (gm.TutorialOpen)
+		{
+			scrollMomentum = 0;
+			prevDistanceSet = false;
+			prevCoordsSet = false;
+			touchBeganOnCloud = true;
+			return;	
+		}
 		#if UNITY_EDITOR
 		Vector2 mousePos = Input.mousePosition;
 		if (Input.GetMouseButtonDown(0))
@@ -228,7 +237,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private const int DOUBLE_TAP_TUT_ID = 24;
 	private const int CLOUD_LAYER = 9;
 	private LayerMask notCloudLayer = ~(1 << CLOUD_LAYER);
+	private DataManager dm;
 	private TutorialManager tm;
+	private GUIManager gm;
 	private float height;
 	private float width;
 	private Camera vectorCam;
@@ -243,7 +254,6 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private bool prevDistanceSet;
 	private float prevPlantY;
 	private float scrollMomentum, scrollDirection;
-	private DataManager dm;
 	private float lastTouchTimer, doubleTapTimer, scrolledDownTimer;
 	private float initialCameraY;
 	private float backgroundRepeatY, backgroundRepeatTileY;

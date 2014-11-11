@@ -49,13 +49,8 @@ public class Flower : MonoBehaviour {
 		sr = GetComponent<SpriteRenderer>();
 		im = ItemManager.Instance;
 		tm = TutorialManager.Instance;
-//		fruitedColor = Color.red;
+		sm = SoundManager.Instance;
 	}
-	
-//	void Start()
-//	{
-//		
-//	}
 	#endregion
 	
 	#region Actions
@@ -100,7 +95,7 @@ public class Flower : MonoBehaviour {
 			if (growthCounter > nextFlowerDelay)
 			{
 				state = FlowerState.Blooming;
-				Debug.Log ("blooming");
+				sm.PlaySound(sm.flowerBud);
 			}
 			break;
 		case FlowerState.Blooming:
@@ -121,6 +116,7 @@ public class Flower : MonoBehaviour {
 				state = FlowerState.Fruited;
 				sr.sprite = bloomSprite;
 				tm.TriggerTutorial(6);
+				sm.PlaySound(sm.flowerBlossom);
 			}
 			transitionTime += deltaTime;
 //			sr.color = Color.Lerp(Color.white, fruitedColor, t);
@@ -185,7 +181,7 @@ public class Flower : MonoBehaviour {
 			transitionTime = 0;
 			state = FlowerState.Harvested;
 			im.AwardPrize();
-			
+			sm.PlaySound(sm.flowerHarvest);
 		}
 	}
 	#endregion
@@ -194,6 +190,7 @@ public class Flower : MonoBehaviour {
 	private SpriteRenderer sr;
 	private ItemManager im;
 	private TutorialManager tm;
+	private SoundManager sm;
 	private float transitionTime = 0;
 	private float growthCounter = 0;
 	private float nextFlowerDelay;

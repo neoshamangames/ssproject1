@@ -7,6 +7,7 @@ public class PathMover : Mover {
 	#region Parameters
 	public int numberOfSegments;
 	public bool drawPath;
+	public bool rotate;
 	public float delay = 5f;
 	public float speed = 1f;
 	public float startingYRange;
@@ -44,7 +45,8 @@ public class PathMover : Mover {
 				nextDirection = points3[intPart + 2] - points3[intPart + 1];
 			}
 			transform.position = Vector3.Lerp(lowPoint, highPoint, decPart);
-			RotateToPath();
+			if (rotate)
+				RotateToPath();
 		}
 	}
 	#endregion

@@ -18,9 +18,12 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public Plant plant;
 	public Cloud cloud;
 	public Font font;
+	public Texture title;
 	public Texture menuButton;
 	public Texture muteButton;
 	public Texture unmuteButton;
+	public Texture musicOn;
+	public Texture musicMute;
 	public Texture frame;
 	public Texture tabPowerups;
 	public Texture tabCollectables;
@@ -31,14 +34,20 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public Texture tutorialFrame;
 	public Texture tutorialCheckbox;
 	public Texture tutorialCheck;
+	public Texture resetPlant;
 	public Color activeMenuButtonTint;
 	public Color scoreColor;
 	public bool updateValuesInPlayMode = true;
+	[Range(0, 10)]public float titleFadeInTime;
+	[Range(0, 10)]public float titleStillTime;
+	[Range(0, 10)]public float titleFlyUpTime;
+	[Range(0, 1)]public float titleWidthPercent = .75f;
 	[Range(0, 1)]public float iconSizePercent = .2f;
 	[Range(0, 1)]public float menuButtonSizePercent = .2f;
 	[Range(0, 1)]public float muteButtonSizePercent = .2f;
 	[Range(0, 1)]public float buttonsIn = .05f;
 	[Range(0, 1)]public float buttonBottomsHeight = .05f;
+	[Range(0, 1)]public float musicButtonXPercent = .05f;
 	[Range(0, 1)]public float iconXPercent = .2f;
 	[Range(0, 1)]public float iconMultiplierXPercent = .2f;
 	[Range(0, 1)]public float iconMultiplierYPercent = .2f;
@@ -49,23 +58,24 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 1)]public float tabButtonSpacingPercent = 0f;
 	[Range(0, 1)]public float tabButtonWidthPercent = .33f;
 	[Range(0, 1)]public float tabButtonHeightPercent = .9f;
-	[Range(-1, 1)]public float powerup1_YPercent = -.25f;
-	[Range(-1, 1)]public float powerup2_YPercent = -.05f;
-	[Range(-1, 1)]public float powerup3_YPercent = .1f;
-	[Range(-1, 1)]public float piecesFinishX = .25f;
-	[Range(-1, 1)]public float piecesStartX = .05f;
+	[Range(-.5f, .5f)]public float powerup1_YPercent = -.25f;
+	[Range(-.5f, .5f)]public float powerup2_YPercent = -.05f;
+	[Range(-.5f, .5f)]public float powerup3_YPercent = .1f;
+	[Range(-.5f, .5f)]public float piecesFinishX = .25f;
+	[Range(-.5f, .5f)]public float piecesStartX = .05f;
+	[Range(-.5f, .5f)]public float piecesYPercent = 0f;
 	[Range(-1, 1)]public float multiplierXPercent = .5f;
 	[Range(-1, 1)]public float multiplierYPercent = .75f;
-	[Range(0, 1)]public float powerUpLabelXPercent = 0;
-	[Range(-1, 1)]public float powerUpLabelYPercent = 0;
+	[Range(-5f, .5f)]public float powerUpLabelXPercent = 0;
+	[Range(-.5f, .5f)]public float powerUpLabelYPercent = 0;
 	public int collectablesPerPage = 3;
-	[Range(0, 1)]public float collectablesStartYPercent = .1f;
-	[Range(0, 1)]public float collectablesFinishYPercent = .9f;
+	[Range(-.5f, .5f)]public float collectablesStartYPercent = .1f;
+	[Range(-5f, .5f)]public float collectablesFinishYPercent = .9f;
 	[Range(0, 1)]public float pageButtonSizePercent;
-	[Range(0, 1)]public float pageButtonsYPercent;
+	[Range(-.5f, .5f)]public float pageButtonsYPercent;
 	[Range(0, 1)]public float pageButtonsInPercent;
-	[Range(0, 1)]public float creditsButtonXPercent = .5f;
-	[Range(0, 1)]public float creditsButtonYPercent = .5f;
+	[Range(-.5f, .5f)]public float creditsButtonXPercent = .5f;
+	[Range(-.5f, .5f)]public float creditsButtonYPercent = .5f;
 	[Range(0, 1)]public float backButtonXPercent = .5f;
 	[Range(0, 1)]public float backButtonYPercent = .5f;
 	[Range(0, 1)]public float scoreXPercent = .5f;
@@ -73,12 +83,12 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public float fontSizeInverse = 20f;
 	public StoreItem[] storeItems;
 	[Range(0, 1)]public float storeItemSizePercent = .2f;
-	[Range(0, 1)]public float storeStartY = .2f;
-	[Range(0, 1)]public float storeFinishY = .8f;
-	[Range(0, 1)]public float storeItemXPercent = .25f;
-	[Range(0, 1)]public float storePriceXPercent = .25f;
+	[Range(-.5f, .5f)]public float storeStartY = .2f;
+	[Range(-.5f, .5f)]public float storeFinishY = .8f;
+	[Range(-.5f, .5f)]public float storeItemXPercent = .25f;
+	[Range(-.5f, .5f)]public float storePriceXPercent = .25f;
 	[Range(-1, 1)]public float storePriceYPercent = 0;
-	[Range(0, 1)]public float storeNameXPercent = .25f;
+	[Range(-.5f, .5f)]public float storeNameXPercent = .25f;
 	[Range(-1, 1)]public float storeNameYPercent = 0;
 	[Multiline]public string creditsText;
 	[Range(0, 1)]public float creditsXPercent = .5f;
@@ -103,13 +113,20 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public float okFontSizeInverse = 10f;
 	public float tutCheckTextSizeInverse = 20f;
 	[Range(0, 1)]public float tutorialFrameWidthPercent = .8f;
-	[Range(0, 1)]public float tutorialTextXPercent = .1f;
-	[Range(0, 1)]public float tutorialTextYPercent = .1f;
+	[Range(-.5f, .5f)]public float tutorialTextXPercent = .1f;
+	[Range(-.5f, .5f)]public float tutorialTextYPercent = .1f;
 	[Range(0, 1)]public float tutorialTextWidthPercent = .7f;
-	[Range(0, 1)]public float tutorialCheckboxXPercent, tutorialCheckboxYPercent, tutorialCheckboxSizePercent;
-	[Range(0, 1)]public float tutorialCheckXPercent, tutorialCheckYPercent, tutorialCheckSizePercent;
-	[Range(0, 1)]public float tutorialCheckTextXPercent, tutorialCheckTextYPercent;
-	[Range(0, 1)]public float tutorialAcceptXPercent, tutorialAcceptYPercent, tutorialAcceptWidthPercent, tutorialAcceptHeightPercent;
+	[Range(-.5f, .5f)]public float tutorialCheckboxXPercent, tutorialCheckboxYPercent;
+	[Range(-.5f, .5f)]public float tutorialCheckXPercent, tutorialCheckYPercent;
+	[Range(0, 1)]public float tutorialCheckSizePercent, tutorialCheckboxSizePercent;
+	[Range(-.5f, .5f)]public float tutorialCheckTextXPercent, tutorialCheckTextYPercent;
+	[Range(-.5f, .5f)]public float tutorialAcceptXPercent, tutorialAcceptYPercent;
+	[Range(0, 1)]public float tutorialAcceptWidthPercent, tutorialAcceptHeightPercent;
+	[Range(-1, .5f)]public float secretButtonYPercent;
+	[Range(0, 1)]public float resetButtonSizePercent;
+	[Range(-.5f, .5f)]public float resetButtonXPercent;
+	[Range(0, 1)]public float resetButtonYPercent;
+	[Range(0,255)]public byte resetButtonTransparency = 100;
 	#endregion
 	
 	#region Properties
@@ -141,6 +158,12 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		drawCheckbox = checkbox;
 //		menuOpen = false;//TODO: dim menu while tutorial popup is open
 	}
+	
+	public void DisplayTitle()
+	{
+		titleTimer = 0;
+		titleVisible = true;
+	}
 	#endregion
 	
 	#region Unity
@@ -151,6 +174,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		cm = GetComponent<CameraManager>();
 		tm = TutorialManager.Instance;
 		dm = DataManager.Instance;
+		sm = SoundManager.Instance;
 		
 		ItemManager.OnPowerupActivated += OnPowerupActivated;
 		
@@ -158,7 +182,8 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		powerup2 = im.prizes[1];
 		powerup1Name = powerup1.name;
 		
-		muted = am.Muted;
+		sfxMuted = am.SFXMute;
+		musicMuted = am.MusicMute;
 		
 		width = Screen.width;
 		height = Screen.height;
@@ -199,7 +224,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		buttonStyle.font = font;
 		buttonStyle.normal.textColor = Color.white;
 		buttonStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
-		buttonStyle.alignment = TextAnchor.UpperCenter;
+		buttonStyle.alignment = TextAnchor.UpperLeft;
 		buttonStyle.border = new RectOffset(0, 0, 0, 0);
 		buttonStyle.stretchWidth = true;
 		buttonStyle.stretchHeight = true;
@@ -210,7 +235,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tutorialStyle.font = font;
 		tutorialStyle.fontSize = Mathf.RoundToInt(Screen.width / tutorialFontSizeInverse);
 		tutorialStyle.normal.textColor = Color.white;
-		tutorialStyle.alignment = TextAnchor.UpperLeft;
+		tutorialStyle.alignment = TextAnchor.UpperCenter;
 		tutorialStyle.wordWrap = true;
 		
 		okStyle = new GUIStyle();
@@ -242,6 +267,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		frameProportions = (float)frame.width/(float)frame.height;
 		tabProportions = (float)tabPowerups.width/(float)tabPowerups.height;
 		tutorialFrameProportions = (float)tutorialFrame.width/(float)tutorialFrame.height;
+		titleProportions = (float)title.width/(float)title.height;
 		
 		tabButtonXs = new float[3];
 		
@@ -289,8 +315,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		growFasterUsedTutDisp = (PlayerPrefs.GetInt(string.Format("tut{0}", GROW_FASTER_USED_TUT_ID)) == 2);
 		drySlowerUsedTutDisp = (PlayerPrefs.GetInt(string.Format("tut{0}", DRY_SLOWER_USED_TUT_ID)) == 2);
 		powerupsMenuTutNotDisp = !(PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_MENU_TUT_ID)) == 2);
-		Debug.Log ("playerprefs value: " + PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_MENU_TUT_ID)));
-		Debug.Log ("powerupsMenuTutNotDisp: " + powerupsMenuTutNotDisp);
 		powerupsUsedTutsDisp = (growFasterUsedTutDisp && powerupsUsedTutsDisp);
 		
 		numberOfCollectables = im.collectables.Count;
@@ -303,6 +327,34 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		if (updateValuesInPlayMode)
 			CalculateValues();
 		#endif
+		
+		if (titleVisible)
+		{
+			titleTimer += Time.deltaTime;
+			float titleY = initTitleY;
+			if (titleTimer < titleFadeInTime)
+			{
+				float alpha = titleTimer/titleFadeInTime;
+				GUI.color = new Color(1f, 1f, 1f, alpha);
+			}
+			else
+			{
+				float titleStillTimer = titleTimer - titleFadeInTime;
+				if (titleStillTimer > titleStillTime)
+				{
+					float upTimer = titleStillTimer - titleFadeInTime;
+					float t = upTimer/titleFlyUpTime;
+					titleY = Mathf.Lerp(initTitleY, -titleHeight, t);
+					if (t > 1)
+						titleVisible = false;
+				}
+			}
+			GUI.DrawTexture(new Rect(titleX, titleY, titleWidth, titleHeight), title);
+			GUI.color = Color.white;
+		}
+		
+		if (tutorialPopup)
+			GUI.enabled = false;
 		
 		if (menuOpen)
 		{
@@ -362,10 +414,15 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			}
 			
 			
-			if (GUIButtonTexture(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), muted ? unmuteButton : muteButton))
+			if (GUIButtonTexture(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), sfxMuted ? unmuteButton : muteButton))
 			{
-				muted = !muted;
-				am.ToggleMute();
+				sfxMuted = !sfxMuted;
+				am.ToggleSFX();
+			}
+			if (GUIButtonTexture(new Rect(musicButtonX, muteButtonY, muteButtonSize, muteButtonSize), musicMuted ? musicMute : musicOn))
+			{
+				musicMuted = !musicMuted;
+				am.ToggleMusic();
 			}	
 		}
 		else
@@ -376,17 +433,16 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		if (prizePopup)
 			DrawPrizePopup();
 		
-		if (tutorialPopup)
-			DrawTutorialPopup();
-		
-		if (plant.state == Plant.PlantState.Dead)
+		if (plant.state == Plant.PlantState.Dead && !menuOpen)
 		{
-			if (GUI.Button(new Rect(centerX, 15, 100, 50), "Reset Plant", buttonStyle))//TODO: replace with better
+			GUI.color = new Color32(255, 255, 255, resetButtonTransparency);
+			if (GUIButtonTexture(new Rect(resetButtonX, resetButtonY, resetButtonSize, resetButtonSize), resetPlant))
 			{
 				plant.Reset();
 				cloud.Reset();
 				cm.Reset();
 			}
+			GUI.color = Color.white;
 		}
 		
 		GUI.Label(new Rect(scoreX, scoreY, 200, 50), Mathf.RoundToInt(plant.Height).ToString(), scoreStyle);
@@ -395,6 +451,12 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			DrawActivePowerup(powerup1, powerupTime1X);
 		if (powerup2Active)
 			DrawActivePowerup(powerup2, powerupTime2X);
+		
+		if (tutorialPopup)
+		{
+			GUI.enabled = true;
+			DrawTutorialPopup();
+		}
 	}
 	
 	void OnDestroy()
@@ -407,9 +469,15 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private void OnPowerupActivated(ItemManager.Prize powerup)
 	{
 		if (powerup.name == powerup1Name)
+		{
 			powerup1Active = true;
+			sm.PlaySound(sm.powerupBoost);
+		}
 		else
+		{
 			powerup2Active = true;
+			sm.PlaySound(sm.powerupSlow);
+		}
 		
 	}
 	#endregion
@@ -434,6 +502,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private AudioManager am;
 	private TutorialManager tm;
 	private DataManager dm;
+	private SoundManager sm;
 	private MenuState menuState, lastMenuState = MenuState.POWERUPS;
 	private float height, width;
 	private float centerX, centerY;
@@ -454,9 +523,9 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float backButtonX, backButtonY;
 	private float menuButtonSize, muteButtonSize;
 	private float menuButtonX, menuButtonY;
-	private float muteButtonX, muteButtonY;
+	private float muteButtonX, muteButtonY, musicButtonX;
 	private float scoreX, scoreY;
-	private bool muted;
+	private bool sfxMuted, musicMuted;
 	private int numberOfStoreItems;
 	private string[] productIDs;
 	private float storeItemSize;
@@ -499,6 +568,11 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float pageButtonSize, pageButtonsY, prevPageX, nextPageX;
 	private float secretButtonX1, secretButtonX2, secretButtonY, secretButtonHeight, secretButtonWidth;
 	private int secretButtonStep = 0;
+	private bool titleVisible;
+	private float titleTimer;
+	private float titleX, initTitleY, titleWidth, titleHeight, titleProportions;
+	private float resetButtonX, resetButtonY, resetButtonSize;
+	
 	
 	private bool GUIButtonTexture( Rect r, Texture t)
 	{
@@ -513,6 +587,11 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		frameHeight = Mathf.RoundToInt(frameWidth/frameProportions);
 		tabHeight = Mathf.RoundToInt(frameWidth/tabProportions);
 		tabY = -frameHeight/2 - tabHeight/2 + 1;
+		
+		titleWidth = Mathf.RoundToInt(width * titleWidthPercent);
+		titleHeight = Mathf.RoundToInt(titleWidth/titleProportions);
+		titleX = centerX - titleWidth / 2;
+		initTitleY = centerY - titleHeight / 2;
 		
 		tabButtonY = centerY - frameHeight/2 - tabHeight + tabButtonYPercent * height;
 		tabButtonWidth = frameWidth * tabButtonWidthPercent;
@@ -531,15 +610,16 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		muteButtonSize = Mathf.RoundToInt(width * muteButtonSizePercent);
 		muteButtonX = width - muteButtonSize / 2 - buttonsIn * width;
 		muteButtonY = height - muteButtonSize / 2 - buttonBottomsHeight * height;
+		musicButtonX = musicButtonXPercent * width;
 		
-		creditsButtonX = Mathf.RoundToInt(width * creditsButtonXPercent);
-		creditsButtonY = Mathf.RoundToInt(height * creditsButtonYPercent);
+		creditsButtonX = xRelativeToFrame(creditsButtonXPercent);
+		creditsButtonY = yRelativeToFrame(creditsButtonYPercent);
 		
-		backButtonX = Mathf.RoundToInt(width * backButtonXPercent);
-		backButtonY = Mathf.RoundToInt(height * backButtonYPercent);
+		backButtonX = xRelativeToFrame(backButtonXPercent);
+		backButtonY = yRelativeToFrame(backButtonYPercent);
 		
-		float startX = centerX + frameWidth * piecesStartX;
-		float finishX = centerX + frameWidth * piecesFinishX;
+		float startX = xRelativeToFrame(piecesStartX);
+		float finishX = xRelativeToFrame(piecesFinishX);
 		pieceX = new float[] {
 			Mathf.Lerp(startX, finishX, 0),
 			Mathf.Lerp(startX, finishX, .333f),
@@ -548,30 +628,30 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		};
 		
 		pieceYOffset = new float[] {
-			iconSize/2,
-			0,
-			0,
-			iconSize/2
+			iconSize/2 + frameHeight * piecesYPercent,
+			frameHeight * piecesYPercent,
+			frameHeight * piecesYPercent,
+			iconSize/2 + frameHeight * piecesYPercent
 		};
 		
 		multiplierX = new float[] {
-			pieceX[0] + width * multiplierXPercent - iconSize *.25f,
-			pieceX[1] + width * multiplierXPercent - iconSize * .15f,
-			pieceX[2] + width * multiplierXPercent + iconSize * .15f,
-			pieceX[3] + width * multiplierXPercent + iconSize * .25f
+			pieceX[0] + frameWidth * multiplierXPercent - iconSize * .2f,
+			pieceX[1] + frameWidth * multiplierXPercent - iconSize * .15f,
+			pieceX[2] + frameWidth * multiplierXPercent + iconSize * .15f,
+			pieceX[3] + frameWidth * multiplierXPercent + iconSize * .1f
 		};
 		
-		multiplierYOffset = height * multiplierYPercent;
+		multiplierYOffset = frameHeight * multiplierYPercent;
 		
-		powerup1Y = centerY + height * powerup1_YPercent;
-		powerup2Y = centerY + height * powerup2_YPercent;
-		powerup3Y = centerY + height * powerup3_YPercent;
+		powerup1Y = yRelativeToFrame(powerup1_YPercent);
+		powerup2Y = yRelativeToFrame(powerup2_YPercent);
+		powerup3Y = yRelativeToFrame(powerup3_YPercent);
 		
-		powerUpLabelX = powerUpLabelXPercent * frameWidth;
-		powerUpLabelY = powerUpLabelYPercent * frameWidth;
+		powerUpLabelX = yRelativeToFrame(powerUpLabelXPercent);
+		powerUpLabelY = yRelativeToFrame(powerUpLabelYPercent);
 		
-		collectablesStartY = collectablesStartYPercent * height;
-		collectablesFinishY = collectablesFinishYPercent * height;
+		collectablesStartY = yRelativeToFrame(collectablesStartYPercent);
+		collectablesFinishY = yRelativeToFrame(collectablesFinishYPercent);
 		
 		for(int i=0; i<collectablesPerPage; i++)
 		{
@@ -579,7 +659,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		}
 		
 		pageButtonSize = Mathf.RoundToInt(pageButtonSizePercent * width);
-		pageButtonsY = pageButtonsYPercent * height;
+		pageButtonsY = yRelativeToFrame(pageButtonsYPercent);
 		prevPageX = pageButtonsInPercent * width - pageButtonSize / 2;
 		nextPageX = width - pageButtonSize / 2 - pageButtonsInPercent * width;
 		
@@ -589,13 +669,13 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		storeItemSize = Mathf.RoundToInt(width * storeItemSizePercent);
 		for(int i=0; i<numberOfStoreItems; i++)
 		{
-			storeItemY[i] = Mathf.Lerp(storeStartY, storeFinishY, (float)i/(float)(numberOfStoreItems - 1)) * height;
-			storePriceY[i] = storeItemY[i] + storePriceYPercent * height;
-			storeNameY[i] = storeItemY[i] + storeNameYPercent * height;
+			storeItemY[i] = Mathf.Lerp(storeStartY, storeFinishY, (float)i/(float)(numberOfStoreItems - 1)) * frameHeight + centerY;
+			storePriceY[i] = storeItemY[i] + storePriceYPercent * frameHeight;
+			storeNameY[i] = storeItemY[i] + storeNameYPercent * frameHeight;
 		}
-		storeItemX = Mathf.RoundToInt(width * storeItemXPercent);
-		storePriceX = Mathf.RoundToInt(width * storePriceXPercent);
-		storeNameX = Mathf.RoundToInt(width * storeNameXPercent);
+		storeItemX = xRelativeToFrame(storeItemXPercent);
+		storePriceX = xRelativeToFrame(storePriceXPercent);
+		storeNameX = xRelativeToFrame(storeNameXPercent);
 		
 		creditsX = creditsXPercent * width;
 		creditsY = creditsYPercent * height;
@@ -625,27 +705,45 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		
 		tutorialFrameWidth = Mathf.RoundToInt(tutorialFrameWidthPercent * width);
 		tutorialFrameHeight = Mathf.RoundToInt(tutorialFrameWidth/tutorialFrameProportions);
-		tutorialTextX = Mathf.RoundToInt(tutorialTextXPercent * width);
-		tutorialTextY = Mathf.RoundToInt(tutorialTextYPercent * height);
+		tutorialTextX = xRelativeToFrame(tutorialTextXPercent, tutorialFrameWidth);
+		tutorialTextY = yRelativeToFrame(tutorialTextYPercent, tutorialFrameHeight);
 		tutorialTextWidth = Mathf.RoundToInt(tutorialTextWidthPercent * width);
-		tutorialCheckboxX = Mathf.RoundToInt(tutorialCheckboxXPercent * width);
-		tutorialCheckboxY = Mathf.RoundToInt(tutorialCheckboxYPercent * height);
+		tutorialCheckboxX = xRelativeToFrame(tutorialCheckboxXPercent, tutorialFrameWidth);
+		tutorialCheckboxY = yRelativeToFrame(tutorialCheckboxYPercent, tutorialFrameHeight);
 		tutorialCheckboxSize = Mathf.RoundToInt(tutorialCheckboxSizePercent * width);
-		tutorialCheckX = Mathf.RoundToInt(tutorialCheckXPercent * width);
-		tutorialCheckY = Mathf.RoundToInt(tutorialCheckYPercent * height);
+		tutorialCheckX = xRelativeToFrame(tutorialCheckXPercent, tutorialFrameWidth);
+		tutorialCheckY = yRelativeToFrame(tutorialCheckYPercent, tutorialFrameHeight);
 		tutorialCheckSize = Mathf.RoundToInt(tutorialCheckSizePercent * width);
-		tutorialCheckTextX = Mathf.RoundToInt(tutorialCheckTextXPercent * width);
-		tutorialCheckTextY = Mathf.RoundToInt(tutorialCheckTextYPercent * height);
-		tutorialAcceptX = Mathf.RoundToInt(tutorialAcceptXPercent * width);
-		tutorialAcceptY = Mathf.RoundToInt(tutorialAcceptYPercent * height);
+		tutorialCheckTextX = xRelativeToFrame(tutorialCheckTextXPercent, tutorialFrameWidth);
+		tutorialCheckTextY = yRelativeToFrame(tutorialCheckTextYPercent, tutorialFrameHeight);
+		tutorialAcceptX = xRelativeToFrame(tutorialAcceptXPercent, tutorialFrameWidth);
+		tutorialAcceptY = yRelativeToFrame(tutorialAcceptYPercent, tutorialFrameHeight);
 		tutorialAcceptWidth = Mathf.RoundToInt(tutorialAcceptWidthPercent * width);
 		tutorialAcceptHeight = Mathf.RoundToInt(tutorialAcceptHeightPercent * height);
 		
-		secretButtonWidth = width * .12f;
-		secretButtonHeight = height * .07f;
-		secretButtonX1= centerX + width * .375f - secretButtonWidth/2;
-		secretButtonX2= centerX - width * .375f - secretButtonWidth/2;
-		secretButtonY = height * .11f;
+		secretButtonWidth = width * .15f;
+		secretButtonHeight = height * .1f;
+		secretButtonX1= centerX + width * .35f - secretButtonWidth/2;
+		secretButtonX2= centerX - width * .35f - secretButtonWidth/2;
+		secretButtonY = yRelativeToFrame(secretButtonYPercent);
+		
+		resetButtonSize = Mathf.RoundToInt(width * resetButtonSizePercent);
+		resetButtonX = xRelativeToFrame(resetButtonXPercent);
+		resetButtonY = Mathf.RoundToInt(height * resetButtonYPercent);
+	}
+	
+	private int xRelativeToFrame(float percent, float? fw = null)
+	{
+		if (fw == null)
+			fw = frameWidth;
+		return Mathf.RoundToInt(percent * (float)fw + centerX);
+	}
+	
+	private int yRelativeToFrame(float percent, float? fh = null)
+	{
+		if (fh == null)
+			fh = frameHeight;
+		return Mathf.RoundToInt(percent * (float)fh + centerY);
 	}
 	
 	private void DrawMenuButton()
@@ -655,9 +753,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			menuOpen = !menuOpen;
 			prizePopup = false;
 			//TODO: dim if tutorial is open
-			
-			Debug.Log ("buton pressed");
-			
+						
 			if (menuOpen)
 			{
 				if (powerupsMenuTutNotDisp)
@@ -672,7 +768,12 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 						tm.TriggerTutorial(HAVE_REVIVE_TUT_ID);
 					else
 						tm.TriggerTutorial(NO_REVIVE_TUT_ID);
+				
+				sm.PlaySound(sm.menuOpen);
 			}
+			else
+				sm.PlaySound(sm.menuClose);
+			
 		}
 	}
 	
@@ -684,6 +785,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 				SoomlaStore.StopIabServiceInBg();
 			menuState = MenuState.POWERUPS;
 			lastMenuState = menuState;
+			sm.PlaySound(sm.menuTab);
 		}
 	}
 	
@@ -695,6 +797,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 				SoomlaStore.StopIabServiceInBg();
 			menuState = MenuState.COLLECTABLES;
 			lastMenuState = menuState;
+			sm.PlaySound(sm.menuTab);
 		}
 	}
 	
@@ -707,6 +810,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			lastMenuState = menuState;
 			if (!storeTutorialDisplayed)
 				tm.TriggerTutorial(STORE_TUT_ID);
+			sm.PlaySound(sm.menuTab);
 		}
 	}
 	
@@ -787,8 +891,8 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	
 	private void ActivatePowerup(ItemManager.Prize powerup)
 	{
-		im.Activate(powerup);
-		menuOpen = false;
+		if (im.Activate(powerup))
+			menuOpen = false;
 		
 		if (!powerupsUsedTutsDisp)
 		{
@@ -821,11 +925,17 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		
 		if (collectablesPage > 0) 
 			if (GUIButtonTexture(new Rect(prevPageX, pageButtonsY, pageButtonSize, pageButtonSize), previousPage))
+			{
 				collectablesPage--;
+				sm.PlaySound(sm.menuBack);
+			}
 		
 		if (start + numCollectablesToDraw < numberOfCollectables)
 			if (GUIButtonTexture(new Rect(nextPageX, pageButtonsY, pageButtonSize, pageButtonSize), nextPage))
+			{
 				collectablesPage++;
+				sm.PlaySound(sm.menuForward);
+			}
 	}
 	
 	private void DrawActivePowerup(ItemManager.Prize powerup, float x)
@@ -942,6 +1052,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tm.ResetStates();
 		plant.Reset();
 		dm.DeleteFile();
+		sm.PlaySound(sm.powerupRevive);
 	}
 	
 	private void DrawPrizePopup()
