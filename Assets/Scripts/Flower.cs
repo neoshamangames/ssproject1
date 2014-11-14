@@ -22,7 +22,6 @@ public class Flower : MonoBehaviour {
 			{
 			case FlowerState.PreBloom:
 				val = growthCounter - nextFlowerDelay;//should be negative
-				Debug.Log ("GrowthState PreBloom. val: " + val);
 				break;
 				
 			case FlowerState.Blooming:
@@ -69,7 +68,6 @@ public class Flower : MonoBehaviour {
 			state = FlowerState.PreBloom;
 			nextFlowerDelay = -growthState;
 			flowerStateLoaded = true;
-			Debug.Log ("flowerStateLoaded nextFlowerDelay: " + nextFlowerDelay);
 		}
 		else
 		{
@@ -142,22 +140,21 @@ public class Flower : MonoBehaviour {
 		if (!flowerStateLoaded)
 			nextFlowerDelay = stemming.flowerDelay;
 			
-		Debug.Log ("CatchupGrowth newGrowth: " + newGrowth + ", nextFlowerDelay: " + nextFlowerDelay);
+//		Debug.Log ("CatchupGrowth newGrowth: " + newGrowth + ", nextFlowerDelay: " + nextFlowerDelay);
 		
 		if (state == FlowerState.PreBloom)
 		{
-			Debug.Log ("state is PreBloom");
+//			Debug.Log ("state is PreBloom");
 			growthCounter = newGrowth;
 			if (growthCounter > nextFlowerDelay)
 			{
 				state = FlowerState.Blooming;
 				newGrowth -= nextFlowerDelay;
-				Debug.Log ("flower is blooming. newGrowth remaining: " + newGrowth);
+//				Debug.Log ("flower is blooming. newGrowth remaining: " + newGrowth);
 			}
 		}
 		if (state == FlowerState.Blooming)
 		{
-			Debug.Log ("state is Blooming");
 			float flowerGrowth = newGrowth * stemming.flowerGrowthFactor;
 			float scale = transform.localScale.x + flowerGrowth;
 			if (scale > stemming.maxFlowerSize)
@@ -167,7 +164,6 @@ public class Flower : MonoBehaviour {
 //				sr.color = fruitedColor;
 				sr.sprite = bloomSprite;
 				tm.TriggerTutorial(6);
-				Debug.Log ("flower has fruited");
 			}
 			transform.localScale = new Vector3(scale, scale, scale);
 		}

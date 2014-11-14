@@ -58,12 +58,10 @@ public class TutorialManager : SingletonMonoBehaviour<TutorialManager> {
 		
 		if (gm.TutorialOpen)
 		{
-			Debug.Log ("enqueueing " + ID);
 			queue.Enqueue(currentTE);
 		}
 		else
 		{
-			Debug.Log ("poping up " + ID);
 			currentID = ID;
 			gm.TutorialPopup(currentTE.message, !currentTE.noCheckbox);
 		}
@@ -103,17 +101,14 @@ public class TutorialManager : SingletonMonoBehaviour<TutorialManager> {
 		}
 		else
 		{
-			Debug.Log ("setting to 1");
 			PlayerPrefs.SetInt(string.Format("tut{0}", currentID), 1);
 		}
-		Debug.Log ("queue.Count: " + queue.Count);
 		while (queue.Count > 0)
 		{
 			TutorialEvent nextTE = queue.Dequeue();
 			currentID = nextTE.ID;
 			if ( PlayerPrefs.GetInt(string.Format("tut{0}", currentID)) != 0)
 				continue;
-			Debug.Log ("nextTE.noCheckbox: " + nextTE.noCheckbox);
 			gm.TutorialPopup(nextTE.message, !nextTE.noCheckbox);
 		}
 	}

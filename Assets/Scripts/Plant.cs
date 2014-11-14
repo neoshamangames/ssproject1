@@ -332,8 +332,6 @@ public class Plant : MonoBehaviour {
 		healthyWetThreshold = growth.healthyWetThreshold;
 		drowningThreshold = growth.drowningThreshold;
 		drownedThreshold = growth.drownedThreshold;
-		Debug.Log ("start. drowningThreshold: " + drowningThreshold);
-		
 		
 		//End Cap
 		VectorLine.SetEndCap ("Point", EndCap.Back, appearance.normalMaterial, appearance.frontCapTexture);
@@ -787,7 +785,6 @@ public class Plant : MonoBehaviour {
 			return;
 
 		float secondsToAdvance = (float)dm.secondsSinceSave;
-		Debug.Log ("secondsToAdvance: " + secondsToAdvance);
 		AdvancePlant(secondsToAdvance);
 	}
 	

@@ -21,7 +21,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public float scrollFriction = .01f;
 	[Range(0, 120)]public float minFOVatThinnest = 40f;
 	[Range(0, 120)]public float minFOVatThickest = 40f;
-	[Range(0, 120)]public float maxFOV = 120f; 
+	public Vector3 visibilityEdge;
 	[Range (.5f, 60)]public float popBackTime = 5f;
 	[Range (.5f, 60)]public float doubleTapTutorialTime = 5f;
 	[Range (0, 2)]public float doubleTapTimeout = .5f;
@@ -67,6 +67,8 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		dm = DataManager.Instance;
 		tm = TutorialManager.Instance;
 		gm = GUIManager.Instance;
+		
+		maxFOV = CalculateMaxFOV();
 		
 		lineMinWidth = plant.appearance.minWidth;
 		lineMaxWidth = plant.appearance.maxWidth;
@@ -235,7 +237,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	#region Private
 	private const int WATERED_TUT_ID = 1;
 	private const int DOUBLE_TAP_TUT_ID = 24;
+	private const int FLOWER_TUT_ID = 28;
+	private const float FLOWER_TUT_DELAY = 4f;
 	private const int CLOUD_LAYER = 9;
+	private const float FOV_MAX = 179;
 	private LayerMask notCloudLayer = ~(1 << CLOUD_LAYER);
 	private DataManager dm;
 	private TutorialManager tm;
@@ -262,8 +267,42 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private bool multipleTouches;
 	private float lineMaxWidth, lineMinWidth;
 	private float horizAutoMovementWorldSpace;
+	private float maxFOV;
 	
-//	private float max =0;//temp
+	private float CalculateMaxFOV()
+	{
+		GameObject newGO = new GameObject();
+		newGO.transform.position = new Vector3(0, 0, -10);
+		Camera testCam = newGO.AddComponent<Camera>();
+		float highFOV = FOV_MAX;
+		float lowFOV = minFOVatThickest;
+		
+		float nextFOV = (highFOV + lowFOV)/2;
+		int count = 0;
+		do
+		{
+			testCam.fieldOfView = nextFOV;
+			Vector3 point = testCam.WorldToViewportPoint(visibilityEdge);
+			if (point.x < 0)
+			{
+				lowFOV = testCam.fieldOfView;
+			}
+			else
+			{
+				highFOV = testCam.fieldOfView;
+			}
+			nextFOV = (highFOV + lowFOV)/2;
+			
+			count++;
+			if (count > 100)
+				break;
+		}
+		while (Mathf.Abs(testCam.fieldOfView - nextFOV) > .5f);
+		
+		Destroy(newGO);
+		
+		return nextFOV;
+	}
 
 	private void NewBackgroundTile()
 	{
@@ -349,7 +388,10 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 			{
 				Collider collider = hit.collider;
 				if (collider == flowerTouched)
+				{
 					flowerTouched.gameObject.GetComponent<Flower>().ProcessClick();
+					StartCoroutine(TriggerTutorialAfterDelay(FLOWER_TUT_ID, FLOWER_TUT_DELAY));
+				}
 			}
 		}
 	}
@@ -455,6 +497,12 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		topEdge = mainCam.ViewportToWorldPoint(new Vector3(.5f, 1, plantDistanceFromCam)).y;
 		horizAutoMovementWorldSpace = (	mainCam.ViewportToWorldPoint(new Vector3(maxHorizontalAutoMovement, 0, plantDistanceFromCam)) - 
 		                               mainCam.ViewportToWorldPoint(new Vector3(0, 0, plantDistanceFromCam)) ).x;
+	}
+	
+	private IEnumerator TriggerTutorialAfterDelay(int tutorialID, float delay)
+	{
+		yield return new WaitForSeconds(delay);
+		tm.TriggerTutorial(tutorialID);
 	}
 	#endregion
 }

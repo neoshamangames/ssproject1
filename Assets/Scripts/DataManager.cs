@@ -37,7 +37,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	{
 		im = ItemManager.Instance;
 		filePath = Application.persistentDataPath + "/saplings.data";
-		Debug.Log ("filePath: " + filePath);
 		plantCurvePoints = new List<byte[]>();
 		segments = new List<byte[]>();
 		stemCurvePoints = new List<byte[]>();
@@ -52,13 +51,13 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	{
 		if (File.Exists(filePath))
 		{
-			Debug.Log("file exists. loading...");
+//			Debug.Log("file exists. loading...");
 			if (LoadData())
 				CalculateTimeSinceSave();
 		}
 		else
 		{
-			Debug.Log("no save file found.");
+//			Debug.Log("no save file found.");
 		}	
 	}
 	
@@ -262,7 +261,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		
 		//*collectables: number stored (2 bytes); for each: index (2 bytes), quantity (2 bytes), piece quantities (2 bytes each)
 		ushort numOfCollectablesToStore = (ushort)collectablesToStore.Count;
-		Debug.Log ("numOfCollectablesToStore: " + numOfCollectablesToStore);
 		byte[] numOfCollectablesToStoreBytes = BitConverter.GetBytes(numOfCollectablesToStore);
 		data.Add(numOfCollectablesToStoreBytes[0]);
 		data.Add(numOfCollectablesToStoreBytes[1]);
@@ -278,10 +276,8 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			data.Add(quantityBytes[1]);
 			
 			int numberOfPieces = im.collectables[collectableIndex].pieces.Length;
-			Debug.Log ("numberOfPieces: " + numberOfPieces);
 			for(int p=0; p<numberOfPieces; p++)
 			{
-				Debug.Log ("inventory: " + (uint)im.collectables[collectableIndex].pieces[p].inventory);
 				byte[] pieceQuantityBytes =  BitConverter.GetBytes((uint)im.collectables[collectableIndex].pieces[p].inventory);
 				data.Add(pieceQuantityBytes[0]);
 				data.Add(pieceQuantityBytes[1]);
@@ -290,7 +286,6 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		}
 		
 		byte[] dataArray = data.ToArray();
-		Debug.Log ("dataArray.length: " + dataArray.Length);
 		byte[] hash = md5.ComputeHash(dataArray);
 		
 		File.WriteAllBytes(filePath, dataArray);
@@ -380,18 +375,15 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		int index = 0;
 //		dataLoaded = File.ReadAllBytes(filePath);
 		dataLoaded = ReadData(filePath);
-		Debug.Log ("dataLoaded.Length: " + dataLoaded.Length);
 		byte[] hashLoaded = ReadHash(filePath);
 		byte[] hashComputed = md5.ComputeHash(dataLoaded);
 		for(int i=0; i<16; i++)
 		{
 			if(hashLoaded[i] != hashComputed[i])
 			{
-				Debug.Log ("hashes do not match!");
 				return false;
 			}
 		}
-		Debug.Log ("dataLoaded.Length: " + dataLoaded.Length);
 		
 		uint fileVersionLoaded = BitConverter.ToUInt16(dataLoaded, index);
 		index += 2;

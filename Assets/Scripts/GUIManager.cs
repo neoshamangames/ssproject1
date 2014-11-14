@@ -35,6 +35,8 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public Texture tutorialCheckbox;
 	public Texture tutorialCheck;
 	public Texture resetPlant;
+	public Texture revivePlantActive;
+	public Texture revivePlantInactive;
 	public Color activeMenuButtonTint;
 	public Color scoreColor;
 	public bool updateValuesInPlayMode = true;
@@ -126,6 +128,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 1)]public float resetButtonSizePercent;
 	[Range(-.5f, .5f)]public float resetButtonXPercent;
 	[Range(0, 1)]public float resetButtonYPercent;
+	[Range(0, 1)]public float reviveButtonYPercent;
 	[Range(0,255)]public byte resetButtonTransparency = 100;
 	#endregion
 	
@@ -150,13 +153,10 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	
 	public void TutorialPopup(string message, bool checkbox)
 	{
-		Debug.Log ("popup message: " + message);
 		tutorialPopup = true;
 		tutorialText = message;
 		checkboxChecked = false;
-		Debug.Log ("checkbox: " + checkbox);
 		drawCheckbox = checkbox;
-//		menuOpen = false;//TODO: dim menu while tutorial popup is open
 	}
 	
 	public void DisplayTitle()
@@ -206,7 +206,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		scoreStyle.font = font;
 		scoreStyle.fontSize = Mathf.RoundToInt(Screen.width / fontSizeInverse);
 		scoreStyle.normal.textColor = scoreColor;
-		scoreStyle.alignment = TextAnchor.UpperLeft;
+		scoreStyle.alignment = TextAnchor.UpperRight;
 		
 		quanitityStyle = new GUIStyle();
 		quanitityStyle.font = font;
@@ -253,7 +253,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tutCheckTextStyle.wordWrap = true;
 		
 		numberOfStoreItems = storeItems.Length;
-		productIDs = new string[] {Constants.REVIVE_3_PACK_ID, Constants.REVIVE_5_PACK_ID, Constants.REVIVE_10_PACK_ID, Constants.REVIVE_15_PACK_ID};
+		productIDs = new string[] {Constants.REVIVE_3_PACK_ID, Constants.REVIVE_7_PACK_ID, Constants.REVIVE_20_PACK_ID, Constants.REVIVE_150_PACK_ID};
 		storeItemY = new float[numberOfStoreItems];
 		storePriceY = new float[numberOfStoreItems];
 		storeNameY = new float[numberOfStoreItems];
@@ -292,11 +292,11 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			{
 				MarketItem marketItem = (pvi.PurchaseType as PurchaseWithMarket).MarketItem;
 				itemPrices.Add(String.Format("${0:0.00}", marketItem.Price));
-//				Debug.Log ("itemPrices[i]: " + itemPrices[i]);
+				Debug.Log ("itemPrices[i]: " + itemPrices[i]);
 			}
 			else
 			{
-//				Debug.Log ("can't access store database in Editor. Using placeholder values.");
+				Debug.Log ("can't access store database in Editor. Using placeholder values.");
 				itemPrices.Add(storeItems[i].priceText);
 			}
 			itemNames.Add(storeItems[i].itemName);
@@ -442,10 +442,27 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 				cloud.Reset();
 				cm.Reset();
 			}
+			
+			if (im.powerups[Constants.REVIVE_INDEX].inventory > 0)
+			{
+				if (GUIButtonTexture(new Rect(resetButtonX, reviveButtonY, resetButtonSize, resetButtonSize), revivePlantActive))
+				{
+					ActivatePowerup(im.powerups[2]);
+				}
+			}
+			else
+			{
+				if (GUIButtonTexture(new Rect(resetButtonX, reviveButtonY, resetButtonSize, resetButtonSize), revivePlantInactive))
+				{
+					menuOpen = true;
+					menuState = MenuState.SHOP;
+				}
+			}
+			
 			GUI.color = Color.white;
 		}
 		
-		GUI.Label(new Rect(scoreX, scoreY, 200, 50), Mathf.RoundToInt(plant.Height).ToString(), scoreStyle);
+		GUI.Label(new Rect(scoreX, scoreY, width, 50), String.Format("Score: {0}", Mathf.RoundToInt(plant.Height)), scoreStyle);
 		
 		if (powerup1Active)
 			DrawActivePowerup(powerup1, powerupTime1X);
@@ -571,7 +588,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private bool titleVisible;
 	private float titleTimer;
 	private float titleX, initTitleY, titleWidth, titleHeight, titleProportions;
-	private float resetButtonX, resetButtonY, resetButtonSize;
+	private float resetButtonX, resetButtonY, resetButtonSize, reviveButtonY;
 	
 	
 	private bool GUIButtonTexture( Rect r, Texture t)
@@ -663,7 +680,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		prevPageX = pageButtonsInPercent * width - pageButtonSize / 2;
 		nextPageX = width - pageButtonSize / 2 - pageButtonsInPercent * width;
 		
-		scoreX = width - width * scoreXPercent;
+		scoreX =  -width * scoreXPercent;
 		scoreY = height * scoreYPercent;
 		
 		storeItemSize = Mathf.RoundToInt(width * storeItemSizePercent);
@@ -730,6 +747,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		resetButtonSize = Mathf.RoundToInt(width * resetButtonSizePercent);
 		resetButtonX = xRelativeToFrame(resetButtonXPercent);
 		resetButtonY = Mathf.RoundToInt(height * resetButtonYPercent);
+		reviveButtonY = Mathf.RoundToInt(height * reviveButtonYPercent);
 	}
 	
 	private int xRelativeToFrame(float percent, float? fw = null)
@@ -752,7 +770,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		{
 			menuOpen = !menuOpen;
 			prizePopup = false;
-			//TODO: dim if tutorial is open
 						
 			if (menuOpen)
 			{
