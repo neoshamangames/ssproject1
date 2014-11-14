@@ -8,7 +8,7 @@ namespace Soomla.Store.Saplings
 	{	
 		public int GetVersion()
 		{
-			return 4;
+			return 5;
 		}
 		
 		public VirtualCurrency[] GetCurrencies() {
@@ -29,7 +29,7 @@ namespace Soomla.Store.Saplings
 		
 		public VirtualGood[] GetGoods()
 		{
-			return new VirtualGood[] {REVIVE_GOOD, REVIVE_PACK_3, REVIVE_PACK_5, REVIVE_PACK_10, REVIVE_PACK_15};
+			return new VirtualGood[] {REVIVE_GOOD, REVIVE_PACK_3, REVIVE_PACK_7, REVIVE_PACK_20, REVIVE_PACK_150};
 		}
 		
 		
@@ -39,7 +39,7 @@ namespace Soomla.Store.Saplings
 			"Revive",													//name
 			"Bring your plant back to life!",							//description
 			Constants.REVIVE_ID,										//item ID
-			new PurchaseWithMarket(Constants.REVIVE_ID, .99f)	//purchase type
+			new PurchaseWithMarket(Constants.REVIVE_ID, .99f)			//purchase type
 		);
 		
 		public static VirtualGood REVIVE_PACK_3 = new SingleUsePackVG(
@@ -51,32 +51,32 @@ namespace Soomla.Store.Saplings
 			new PurchaseWithMarket(Constants.REVIVE_3_PACK_ID, .99f)	//purchase type
 		);
 		
-		public static VirtualGood REVIVE_PACK_5 = new SingleUsePackVG(
+		public static VirtualGood REVIVE_PACK_7 = new SingleUsePackVG(
 			Constants.REVIVE_ID,										//good item ID
-			5,															//quantity
-			"Revive 5 Pack",											//name
-			"A pack of 5 revives",										//description
-			Constants.REVIVE_5_PACK_ID,									//item ID
-			new PurchaseWithMarket(Constants.REVIVE_5_PACK_ID, 1.45f)	//purchase type
+			7,															//quantity
+			"Revive 7 Pack",											//name
+			"A pack of 7 revives",										//description
+			Constants.REVIVE_7_PACK_ID,									//item ID
+			new PurchaseWithMarket(Constants.REVIVE_7_PACK_ID, 1.99f)	//purchase type
 		);
 		
-		public static VirtualGood REVIVE_PACK_10 = new SingleUsePackVG(
+		public static VirtualGood REVIVE_PACK_20 = new SingleUsePackVG(
 			Constants.REVIVE_ID,										//good item ID
-			10,															//quantity
-			"Revive 10 Pack",											//name
-			"A pack of 10 revives",										//description
-			Constants.REVIVE_10_PACK_ID,								//item ID
-			new PurchaseWithMarket(Constants.REVIVE_10_PACK_ID, 2.40f)	//purchase type
+			20,															//quantity
+			"Revive 20 Pack",											//name
+			"A pack of 20 revives",										//description
+			Constants.REVIVE_20_PACK_ID,								//item ID
+			new PurchaseWithMarket(Constants.REVIVE_20_PACK_ID, 4.99f)	//purchase type
 			);	
 			
-		public static VirtualGood REVIVE_PACK_15 = new SingleUsePackVG(
-			Constants.REVIVE_ID,										//good item ID
-			15,															//quantity
-			"Revive 15 Pack",											//name
-			"A pack of 15 revives",										//description
-			Constants.REVIVE_15_PACK_ID,								//item ID
-			new PurchaseWithMarket(Constants.REVIVE_15_PACK_ID, 2.99f)	//purchase type
-			);	
+		public static VirtualGood REVIVE_PACK_150 = new SingleUsePackVG(
+			Constants.REVIVE_ID,											//good item ID
+			150,															//quantity
+			"Revive 150 Pack",												//name
+			"A pack of 150 revives",										//description
+			Constants.REVIVE_150_PACK_ID,									//item ID
+			new PurchaseWithMarket(Constants.REVIVE_150_PACK_ID, 29.99f)	//purchase type
+			);
 
 		/** Virtual Categories **/
 		public static VirtualCategory POWERUPS = new VirtualCategory(

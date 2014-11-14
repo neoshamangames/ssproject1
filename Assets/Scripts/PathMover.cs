@@ -91,8 +91,8 @@ public class PathMover : Mover {
 		Vector3 controlPoint2 = new Vector3(finishX + (leftToRight ? 1 : - 1) * Random.Range(minControlPoint2X, maxControlPoint2X),
 											finishY + Random.Range(minControlPoint2Y, maxControlPoint2Y), initialPos.z);
 		Vector3[] curvePoints = {new Vector3(startingX, startingY, initialPos.z), controlPoint1, new Vector3(finishX, finishY, initialPos.z), controlPoint2};
-		Debug.Log ("curvePoints[0]: " + curvePoints[0]);
-		Debug.Log ("curvePoints[2]: " + curvePoints[2]);
+//		Debug.Log ("curvePoints[0]: " + curvePoints[0]);
+//		Debug.Log ("curvePoints[2]: " + curvePoints[2]);
 		path.MakeCurve(curvePoints, numberOfSegments);
 		#if UNITY_EDITOR
 		if (drawPath)
