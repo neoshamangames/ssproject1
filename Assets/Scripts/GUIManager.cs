@@ -37,6 +37,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	public Texture resetPlant;
 	public Texture revivePlantActive;
 	public Texture revivePlantInactive;
+	public Texture dolbyLogo;
 	public Color activeMenuButtonTint;
 	public Color scoreColor;
 	public bool updateValuesInPlayMode = true;
@@ -130,6 +131,9 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 1)]public float resetButtonYPercent;
 	[Range(0, 1)]public float reviveButtonYPercent;
 	[Range(0,255)]public byte resetButtonTransparency = 100;
+	[Range(0, 1)]public float dolbyLogoWidthPercent;
+	[Range(-1, 1)]public float dolbyLogoXPercent;
+	[Range(-1, 1)]public float dolbyLogoYPercent;
 	#endregion
 	
 	#region Properties
@@ -182,8 +186,8 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		powerup2 = im.prizes[1];
 		powerup1Name = powerup1.name;
 		
-		sfxMuted = am.SFXMute;
-		musicMuted = am.MusicMute;
+		sfxMuted = (PlayerPrefs.GetInt("sfxMute") == 1);
+		musicMuted = (PlayerPrefs.GetInt("musicMute") == 1);
 		
 		width = Screen.width;
 		height = Screen.height;
@@ -268,6 +272,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tabProportions = (float)tabPowerups.width/(float)tabPowerups.height;
 		tutorialFrameProportions = (float)tutorialFrame.width/(float)tutorialFrame.height;
 		titleProportions = (float)title.width/(float)title.height;
+		dolbyLogoProporitions = (float)dolbyLogo.width/(float)dolbyLogo.height;
 		
 		tabButtonXs = new float[3];
 		
@@ -589,7 +594,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float titleTimer;
 	private float titleX, initTitleY, titleWidth, titleHeight, titleProportions;
 	private float resetButtonX, resetButtonY, resetButtonSize, reviveButtonY;
-	
+	private float dolbyLogoWidth, dolbyLogoHeight, dolbyLogoProporitions, dolbyLogoX, dolbyLogoY;
 	
 	private bool GUIButtonTexture( Rect r, Texture t)
 	{
@@ -748,6 +753,11 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		resetButtonX = xRelativeToFrame(resetButtonXPercent);
 		resetButtonY = Mathf.RoundToInt(height * resetButtonYPercent);
 		reviveButtonY = Mathf.RoundToInt(height * reviveButtonYPercent);
+		
+		dolbyLogoWidth = Mathf.RoundToInt(width * dolbyLogoWidthPercent);
+		dolbyLogoHeight = Mathf.RoundToInt(dolbyLogoWidth/dolbyLogoProporitions);
+		dolbyLogoX = xRelativeToFrame(dolbyLogoXPercent);
+		dolbyLogoY = yRelativeToFrame(dolbyLogoYPercent);
 	}
 	
 	private int xRelativeToFrame(float percent, float? fw = null)
@@ -1010,6 +1020,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		{
 			ProcessSecretButton(0);
 		}
+		GUI.DrawTexture(new Rect(dolbyLogoX, dolbyLogoY, dolbyLogoWidth, dolbyLogoHeight), dolbyLogo);
 	}
 	
 	private void ProcessSecretButton(int buttonPressed)
