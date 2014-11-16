@@ -295,6 +295,7 @@ public class Plant : MonoBehaviour {
 	#region Actions
 	public void Reset()
 	{
+		am.SelectMusic(PlantState.HealthyDry);
 		Initialize(true);
 	}
 	#endregion
@@ -308,6 +309,7 @@ public class Plant : MonoBehaviour {
 		tm = TutorialManager.Instance;
 		sm = SoundManager.Instance;
 		gm = GUIManager.Instance;
+		am = AudioManager.Instance;
 		stateTime = Time.time;
 		stemBirthTimes = new List<float>();
 	}
@@ -566,6 +568,7 @@ public class Plant : MonoBehaviour {
 	private TutorialManager tm;
 	private SoundManager sm;
 	private GUIManager gm;
+	private AudioManager am;
 	
 	private List<VectorLine> lines;
 	private List<int>lastSegments;
@@ -1331,7 +1334,6 @@ public class Plant : MonoBehaviour {
 
 	private void TransitionState(PlantState newState)
 	{
-//		Debug.Log ("transistioning to state: " + newState);
 		if (state != newState)
 		{
 			stateTime = Time.time;
@@ -1385,6 +1387,7 @@ public class Plant : MonoBehaviour {
 			previousColor = lines[0].color;
 			transitioning = true;
 			transitionTimer = 0;
+			am.SelectMusic(newState);
 		}
 	}
 	
