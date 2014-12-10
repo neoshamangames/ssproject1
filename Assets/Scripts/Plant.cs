@@ -1,3 +1,5 @@
+/*Sean Maltz 2014*/
+
 using UnityEngine;
 using System.Linq;
 using System.Collections;
@@ -138,6 +140,14 @@ public class Plant : MonoBehaviour {
 	#endregion
 	
 	#region Properties
+	public int HighScore {
+		set { highScore = value; }
+		get {
+			highScore = Mathf.Max(highScore, Mathf.RoundToInt(height));
+			return highScore;
+		}
+	}
+	
 	public float greatestWidthOnScreen
 	{
 		get
@@ -295,6 +305,7 @@ public class Plant : MonoBehaviour {
 	#region Actions
 	public void Reset()
 	{
+		SaveHighScore();
 		am.SelectMusic(PlantState.HealthyDry);
 		Initialize(true);
 	}
@@ -310,7 +321,6 @@ public class Plant : MonoBehaviour {
 		sm = SoundManager.Instance;
 		gm = GUIManager.Instance;
 		am = AudioManager.Instance;
-		stateTime = Time.time;
 		stemBirthTimes = new List<float>();
 	}
 	
@@ -362,6 +372,7 @@ public class Plant : MonoBehaviour {
 		openMenuTutorialNotDisplayed = (PlayerPrefs.GetInt(string.Format("tut{0}", POWERUP_MENU_TUT_ID)) == 0);
 		
 		Initialize();
+		highScore = Mathf.Max(PlayerPrefs.GetInt("hs", 0), Mathf.RoundToInt(height));
 	}
 
 	void Update()
@@ -560,6 +571,7 @@ public class Plant : MonoBehaviour {
 	
 	private float growthFactor = 1f;
 	
+	private int highScore;
 	
 	private GrowthAttributes growth;
 	private StemmingAttributes stemming;
@@ -636,7 +648,6 @@ public class Plant : MonoBehaviour {
 	private GameObject stemParent, lineParent;
 	private float stemFallingFadeTime;
 	private int stemCount;
-	private float stateTime;
 	
 	//catchup
 	private const int NEXT_STEM_HEIGHT_MAX = 20;
@@ -658,6 +669,7 @@ public class Plant : MonoBehaviour {
 		if (dyingStem)
 			RemoveStem();
 		dm.SaveData();
+		SaveHighScore();
 	}
 	
 	private void Initialize(bool reset = false)
@@ -769,6 +781,12 @@ public class Plant : MonoBehaviour {
 		for(int i=0; i < lineIndex; i++) 
 			lines[i].Draw3D();
 		lowestLineToDraw = (int)Mathf.Clamp(lineIndex - 1, 0, Mathf.Infinity);
+	}
+	
+	private void SaveHighScore()
+	{
+		highScore = Mathf.Max(PlayerPrefs.GetInt("hs"), Mathf.RoundToInt(height));
+		PlayerPrefs.SetInt("hs", highScore);
 	}
 	
 	private void InitializeValuesFromFile()
@@ -1336,7 +1354,6 @@ public class Plant : MonoBehaviour {
 	{
 		if (state != newState)
 		{
-			stateTime = Time.time;
 			state = newState;
 
 			switch (state)

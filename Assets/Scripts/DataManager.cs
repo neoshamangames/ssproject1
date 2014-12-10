@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿/*Sean Maltz 2014*/
+
+using UnityEngine;
 using System;
 using System.Collections;
 using System.IO;
@@ -26,6 +28,10 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	public bool lastControlPointFlippedLoaded;
 	public float controlLengthLoaded;
 	public float controlAngleLoaded;
+	public int numberOfPlanetsLoaded;
+	public List<byte> planetsIndicesLoaded;
+	public List<Vector3>planetLocalPosLoaded;
+	public List<float>planetScalesLoaded;
 	#if UNITY_EDITOR
 	public bool overrideAdvanceTime;
 	public float secondsToAdvance;
@@ -36,6 +42,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	void Awake ()
 	{
 		im = ItemManager.Instance;
+		cm = CameraManager.Instance;
 		filePath = Application.persistentDataPath + "/saplings.data";
 		plantCurvePoints = new List<byte[]>();
 		segments = new List<byte[]>();
@@ -43,6 +50,9 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		collectablesToStore = new List<ushort>();
 		stemHeightsLoaded = new List<ushort>();
 		stemLineIndicesLoaded = new List<int>();
+		planetsIndicesLoaded = new List<byte>();
+		planetLocalPosLoaded = new List<Vector3>();
+		planetScalesLoaded = new List<float>();
 		data = new List<byte>();
 		md5 = MD5.Create();
 	}
@@ -132,6 +142,8 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		flower growth state (4 bytes each, postive: flower size; negative: growth counter, 0: budded), time until stem death (4 bytes)
 		inventory: 		powerups-- number of powerups(2 bytes); for each powerup: time remaining (4 bytes), quanity (2 bytes), piece quanities (2 bytes each)
 					  	collectables: number stored (2 bytes); index (2 bytes), quantity (2 bytes), piece quantities (2 bytes each)
+		**VERSION 2**
+		planets: number of planets (2 bytes). each planet: index (1 byte), x position (4 bytes), y position (4 bytes), z position (4 bytes), scale (4 bytes)
 		*/
 		
 		byte[] fileVersionBytes = BitConverter.GetBytes(FILE_VERSION);
@@ -193,9 +205,9 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			data.Add(nextStemHeightBytes[b]);
 		
 		float[] stemLengths = plant.StemLengths;
-		uint numberOfStems = (uint)plant.StemLengths.Length;
+		ushort numberOfStems = (ushort)plant.StemLengths.Length;
 		byte[] numberOfStemsBytes = BitConverter.GetBytes(numberOfStems);
-		
+				
 		data.Add(numberOfStemsBytes[0]);
 		data.Add(numberOfStemsBytes[1]);
 		
@@ -253,7 +265,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			int numberOfPieces = im.powerups[i].pieces.Length;
 			for(int p=0; p<numberOfPieces; p++)
 			{
-				byte[] pieceQuantityBytes =  BitConverter.GetBytes((uint)im.powerups[i].pieces[p].inventory);
+				byte[] pieceQuantityBytes =  BitConverter.GetBytes((ushort)im.powerups[i].pieces[p].inventory);
 				data.Add(pieceQuantityBytes[0]);
 				data.Add(pieceQuantityBytes[1]);
 			}
@@ -278,11 +290,41 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 			int numberOfPieces = im.collectables[collectableIndex].pieces.Length;
 			for(int p=0; p<numberOfPieces; p++)
 			{
-				byte[] pieceQuantityBytes =  BitConverter.GetBytes((uint)im.collectables[collectableIndex].pieces[p].inventory);
+				byte[] pieceQuantityBytes =  BitConverter.GetBytes((ushort)im.collectables[collectableIndex].pieces[p].inventory);
 				data.Add(pieceQuantityBytes[0]);
 				data.Add(pieceQuantityBytes[1]);
 			}
 			
+		}
+		
+		if (FILE_VERSION > 1)
+		{
+			//planets: number of planets (2 bytes). each planet: index (1 byte), x position (4 bytes), y position (4 bytes), z position (4 bytes), scale (4 bytes)
+			ushort numberOfPlanets = (ushort)cm.NumberOfPlanets;
+			byte[] numberOfPlanetsBytes = BitConverter.GetBytes(numberOfPlanets);
+			data.Add(numberOfPlanetsBytes[0]);
+			data.Add(numberOfPlanetsBytes[1]);
+			for(ushort i=0; i < numberOfPlanets; i++)
+			{
+				data.Add(cm.PlanetIndices[i]);
+				Transform planetTransform = cm.Planets[i];
+				
+				byte[] planetXBytes = BitConverter.GetBytes(planetTransform.localPosition.x);
+				for(int b=0; b<4; b++)
+					data.Add(planetXBytes[b]);
+					
+				byte[] planetYBytes = BitConverter.GetBytes(planetTransform.localPosition.y);
+				for(int b=0; b<4; b++)
+					data.Add(planetYBytes[b]);
+					
+				byte[] planetZBytes = BitConverter.GetBytes(planetTransform.localPosition.z);
+				for(int b=0; b<4; b++)
+					data.Add(planetZBytes[b]);
+					
+				byte[] planetScaleBytes = BitConverter.GetBytes(planetTransform.localScale.x);
+				for(int b=0; b<4; b++)
+					data.Add(planetScaleBytes[b]);
+			}
 		}
 		
 		byte[] dataArray = data.ToArray();
@@ -342,8 +384,9 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 	#endregion
 	
 	#region Private
-	private const ushort FILE_VERSION = 1;
+	private const ushort FILE_VERSION = 2;
 	private ItemManager im;
+	private CameraManager cm;
 	private string filePath;
 //	private string data;
 	private List<byte> data;
@@ -389,9 +432,9 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		index += 2;
 		
 		if (fileVersionLoaded == FILE_VERSION)
-			Debug.Log ("file version is good.");
+			Debug.Log ("file version is the same.");
 		else
-			Debug.LogError("file version has changed!");
+			Debug.Log("file version has changed.");
 		
 		ticksIndex	= index;
 		ticksLoaded = BitConverter.ToInt64(dataLoaded, index);
@@ -443,7 +486,7 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 		
 		for(int i=0; i<numberOfStemsLoaded; i++)
 		{
-			stemLineIndicesLoaded.Add(dataLoaded[i*10 + index]);
+			stemLineIndicesLoaded.Add(BitConverter.ToUInt16(dataLoaded, i*10 + index));
 			stemHeightsLoaded.Add(BitConverter.ToUInt16(dataLoaded, i*10 + 4 + index));
 			stemLengthsLoaded.Add(BitConverter.ToSingle(dataLoaded, i*10 + 6 + index));
 		}
@@ -497,6 +540,24 @@ public class DataManager : SingletonMonoBehaviour<DataManager> {
 				index += 2;
 			}
 			StoreCollectableIndex((ushort)colIndex);
+		}
+		
+		index += numberOfCollectablesLoaded * 4;
+		
+		if (fileVersionLoaded > 1)
+		{
+			//planets: number of planets (2 bytes). each planet: index (1 byte), x position (4 bytes), y position (4 bytes), z position (4 bytes), scale (4 bytes)
+			numberOfPlanetsLoaded = BitConverter.ToUInt16(dataLoaded, index);
+			index += 2;
+			for (int i=0; i < numberOfPlanetsLoaded; i++)
+			{
+				planetsIndicesLoaded.Add(dataLoaded[index]);
+				index++;
+				planetLocalPosLoaded.Add(new Vector3(BitConverter.ToSingle(dataLoaded, index), BitConverter.ToSingle(dataLoaded, index + 4), BitConverter.ToSingle(dataLoaded, index + 8) ) );
+				index += 12;
+				planetScalesLoaded.Add(BitConverter.ToSingle(dataLoaded, index));
+				index += 4;
+			}
 		}
 		
 		return true;

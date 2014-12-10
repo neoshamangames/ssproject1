@@ -1,3 +1,5 @@
+/*Sean Maltz 2014*/
+
 using UnityEngine;
 using System;
 using System.Collections;
@@ -44,6 +46,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 10)]public float titleFadeInTime;
 	[Range(0, 10)]public float titleStillTime;
 	[Range(0, 10)]public float titleFlyUpTime;
+	[Range(0, 10)]public float highScoreTime;
 	[Range(0, 1)]public float titleWidthPercent = .75f;
 	[Range(0, 1)]public float iconSizePercent = .2f;
 	[Range(0, 1)]public float menuButtonSizePercent = .2f;
@@ -134,12 +137,20 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	[Range(0, 1)]public float dolbyLogoWidthPercent;
 	[Range(-1, 1)]public float dolbyLogoXPercent;
 	[Range(-1, 1)]public float dolbyLogoYPercent;
+	[Range(0, 1)]public float highScoreLeftPercent;
+	[Range(0, 1)]public float highScoreTopPercent;
+	[Range(0, 1)]public float highScoreYPercent;
 	#endregion
 	
 	#region Properties
 	public bool TutorialOpen
 	{
 		get { return tutorialPopup; }
+	}
+	
+	public bool MenuOpen
+	{
+		get { return menuOpen; }
 	}
 	
 	#endregion
@@ -161,6 +172,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		tutorialText = message;
 		checkboxChecked = false;
 		drawCheckbox = checkbox;
+		cloud.StopSound();
 	}
 	
 	public void DisplayTitle()
@@ -261,7 +273,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		storeItemY = new float[numberOfStoreItems];
 		storePriceY = new float[numberOfStoreItems];
 		storeNameY = new float[numberOfStoreItems];
-		PVIs = new List<PurchasableVirtualItem>();
 		itemPrices = new List<string>();
 		itemNames = new List<string>();
 		
@@ -282,14 +293,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	}
 	
 	void Start()
-	{
-		List<VirtualGood> virtualGoods = StoreInfo.GetVirtualGoods();
-		
-//		foreach(VirtualGood virtualGood in virtualGoods)
-//		{
-//			Debug.Log ("virtualGood.Name: " + virtualGood.Name + ", virtualGood.ItemId: " + virtualGood.ItemId + ", virtualGood.ID: " + virtualGood.ID);
-//		}
-		
+	{		
 		for(int i=0; i<numberOfStoreItems; i++)
 		{
 			PurchasableVirtualItem pvi = StoreInfo.GetItemByItemId(productIDs[i]) as PurchasableVirtualItem;
@@ -363,6 +367,16 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		
 		if (menuOpen)
 		{
+			if (GUIButtonTexture(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), sfxMuted ? unmuteButton : muteButton))
+			{
+				sfxMuted = !sfxMuted;
+				am.ToggleSFX();
+			}
+			if (GUIButtonTexture(new Rect(musicButtonX, muteButtonY, muteButtonSize, muteButtonSize), musicMuted ? musicMute : musicOn))
+			{
+				musicMuted = !musicMuted;
+				am.ToggleMusic();
+			}	
 		
 			GUI.color = activeMenuButtonTint;
 			DrawMenuButton();
@@ -417,18 +431,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 				
 				break;
 			}
-			
-			
-			if (GUIButtonTexture(new Rect(muteButtonX, muteButtonY, muteButtonSize, muteButtonSize), sfxMuted ? unmuteButton : muteButton))
-			{
-				sfxMuted = !sfxMuted;
-				am.ToggleSFX();
-			}
-			if (GUIButtonTexture(new Rect(musicButtonX, muteButtonY, muteButtonSize, muteButtonSize), musicMuted ? musicMute : musicOn))
-			{
-				musicMuted = !musicMuted;
-				am.ToggleMusic();
-			}	
 		}
 		else
 		{
@@ -479,6 +481,17 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 			GUI.enabled = true;
 			DrawTutorialPopup();
 		}
+		
+		if (GUI.Button(new Rect(highScoreButtonX, 0, width, highScoreButtonY), "", buttonStyle))
+		{
+			highScoreTimer = highScoreTime;
+		}
+		
+		if (highScoreTimer > 0)
+		{
+			highScoreTimer -= Time.deltaTime;
+			GUI.Label(new Rect(scoreX, highScoreY, width, 50), String.Format("Your Best: {0}", plant.HighScore), scoreStyle);
+		}
 	}
 	
 	void OnDestroy()
@@ -519,6 +532,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private const int NO_REVIVE_TUT_ID = 20;
 	private const int STORE_TUT_ID = 21;
 	private const int POWERUP_MENU_TUT_ID = 27;
+	private const int LAST_COLLECTABLE_TUT_ID = 29;
 	private ItemManager im;
 	private CameraManager cm;
 	private AudioManager am;
@@ -553,7 +567,6 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float storeItemSize;
 	private float[] storeItemY, storePriceY, storeNameY;
 	private float storeItemX, storePriceX, storeNameX;
-	private List<PurchasableVirtualItem> PVIs;
 	private List<string> itemPrices;
 	private List<string> itemNames;
 	private float creditsX, creditsY;
@@ -589,12 +602,14 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	private float[] collectablesY;
 	private float pageButtonSize, pageButtonsY, prevPageX, nextPageX;
 	private float secretButtonX1, secretButtonX2, secretButtonY, secretButtonHeight, secretButtonWidth;
+	private float highScoreButtonX, highScoreButtonY, highScoreTimer, highScoreY;
 	private int secretButtonStep = 0;
 	private bool titleVisible;
 	private float titleTimer;
 	private float titleX, initTitleY, titleWidth, titleHeight, titleProportions;
 	private float resetButtonX, resetButtonY, resetButtonSize, reviveButtonY;
 	private float dolbyLogoWidth, dolbyLogoHeight, dolbyLogoProporitions, dolbyLogoX, dolbyLogoY;
+	private float frameTopEdge, frameBottomEdge, frameRightEdge;
 	
 	private bool GUIButtonTexture( Rect r, Texture t)
 	{
@@ -606,7 +621,9 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	{
 		frameWidth = width * frameWidthPercent;
 		frameX = centerX - frameWidth / 2;
+		frameRightEdge = width - frameX;
 		frameHeight = Mathf.RoundToInt(frameWidth/frameProportions);
+		frameBottomEdge = height - (height - frameHeight)/2;
 		tabHeight = Mathf.RoundToInt(frameWidth/tabProportions);
 		tabY = -frameHeight/2 - tabHeight/2 + 1;
 		
@@ -687,6 +704,7 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		
 		scoreX =  -width * scoreXPercent;
 		scoreY = height * scoreYPercent;
+		highScoreY = height * highScoreYPercent;
 		
 		storeItemSize = Mathf.RoundToInt(width * storeItemSizePercent);
 		for(int i=0; i<numberOfStoreItems; i++)
@@ -758,6 +776,9 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 		dolbyLogoHeight = Mathf.RoundToInt(dolbyLogoWidth/dolbyLogoProporitions);
 		dolbyLogoX = xRelativeToFrame(dolbyLogoXPercent);
 		dolbyLogoY = yRelativeToFrame(dolbyLogoYPercent);
+		
+		highScoreButtonX = Mathf.RoundToInt(highScoreLeftPercent * width);
+		highScoreButtonY = Mathf.RoundToInt(highScoreTopPercent * height);
 	}
 	
 	private int xRelativeToFrame(float percent, float? fw = null)
@@ -776,6 +797,14 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 	
 	private void DrawMenuButton()
 	{
+		if (menuOpen)
+		{
+			if (GUI.Button(new Rect(0, 0, frameX, height), "", buttonStyle) || GUI.Button(new Rect(frameRightEdge, 0, width, height), "", buttonStyle)
+			    || GUI.Button(new Rect(0, 0, width, tabButtonY), "", buttonStyle) || GUI.Button(new Rect(0, frameBottomEdge, width, height), "", buttonStyle))
+			{
+				menuOpen = false;
+			}
+		}
 		if (GUIButtonTexture(new Rect(menuButtonX, menuButtonY, menuButtonSize, menuButtonSize), menuButton))
 		{
 			menuOpen = !menuOpen;
@@ -1149,6 +1178,13 @@ public class GUIManager : SingletonMonoBehaviour<GUIManager> {
 					}
 					if (completeCollectableTutorialDisplayed == true && completePowerupTutorialDisplayed == true && completeReviveTutorialDisplayed == true)
 						completePrizeTutorialsDisplayed = true;
+				}
+				if (awardedPrize.type == ItemManager.Type.Collectable)
+				{
+					if (im.CollectablesRemain())
+					{
+						tm.TriggerTutorial(LAST_COLLECTABLE_TUT_ID);
+					}
 				}
 			}
 			else

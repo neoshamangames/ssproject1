@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿/*Sean Maltz 2014*/
+
+using UnityEngine;
 using System.Collections;
 
 public class SoundManager : SingletonMonoBehaviour<SoundManager> {
@@ -22,7 +24,6 @@ public class SoundManager : SingletonMonoBehaviour<SoundManager> {
 	#region Unity
 	void Awake () {
 		audioSource = gameObject.GetComponent<AudioSource>();
-		Debug.Log ("audioSource: " + audioSource);
 	}
 	
 	void Start () {

@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿/*Sean Maltz 2014*/
+
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -12,6 +14,7 @@ public class AudioManager : SingletonMonoBehaviour<AudioManager> {
 	public AudioClip musicHealthy;
 	public AudioClip musicVeryHealthy;
 	[Range(0, 1)]public float defaultMusicVolume = .7f;
+	[Range(0, 1)]public float rainingMusicVolume = .35f;
 	[Range(0, 1)]public float defaultSFXVolume = .7f;
 	public float musicTransitionTime = 1f;
 	#endregion
@@ -49,6 +52,30 @@ public class AudioManager : SingletonMonoBehaviour<AudioManager> {
 			break;
 		}
 		StartCoroutine(TransitionMusic(newIndex));
+	}
+	
+	public void DimMusic()
+	{
+		if (!musicMute)
+		{
+			for(int i=0; i<4; i++)
+			{
+				if (i == musicIndex)
+					musicSources[i].volume = rainingMusicVolume;
+			}
+		}
+	}
+	
+	public void UndimMusic()
+	{
+		if (!musicMute)
+		{
+			for(int i=0; i<4; i++)
+			{
+				if (i == musicIndex)
+					musicSources[i].volume = defaultMusicVolume;
+			}
+		}
 	}
 	
 	public void ToggleMusic()
@@ -89,7 +116,7 @@ public class AudioManager : SingletonMonoBehaviour<AudioManager> {
 	#endregion
 	
 	#region Unity	
-	void Start () {
+	void Awake () {
 		switch (plant.state)
 		{
 		case Plant.PlantState.Dead:
@@ -145,11 +172,13 @@ public class AudioManager : SingletonMonoBehaviour<AudioManager> {
 		{
 //			Debug.Log ("transiton music to newState: " + newIndex);
 			transitionTimer = 0;
+			float startMusicVol = musicSources[musicIndex].volume;
+			float startNewMusicVol = musicSources[newIndex].volume;
 			while (transitionTimer < musicTransitionTime)
 			{
 				float t = transitionTimer/musicTransitionTime;
-				musicSources[musicIndex].volume = Mathf.Lerp(defaultMusicVolume, 0, t);
-				musicSources[newIndex].volume = Mathf.Lerp(0, defaultMusicVolume, t);
+				musicSources[musicIndex].volume = Mathf.Lerp(startMusicVol, 0, t);
+				musicSources[newIndex].volume = Mathf.Lerp(startNewMusicVol, defaultMusicVolume, t);
 				yield return null;
 				transitionTimer += Time.deltaTime;
 			}

@@ -1,3 +1,5 @@
+/*Sean Maltz 2014*/
+
 using UnityEngine;
 
 public class SingletonMonoBehaviour<T> : MonoBehaviour
