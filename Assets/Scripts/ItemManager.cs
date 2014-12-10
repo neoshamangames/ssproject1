@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿/*Sean Maltz 2014*/
+
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Soomla;
@@ -339,6 +341,12 @@ public class ItemManager : SingletonMonoBehaviour<ItemManager> {
 			}
 		}
 		return false;
+	}
+	
+	public bool CollectablesRemain()
+	{
+		List<Prize> colletables = GetUnownedCollectables();
+		return (colletables.Count == 0);
 	}
 	#endregion
 	

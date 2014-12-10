@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿/*Sean Maltz 2014*/
+
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Vectrosity;
@@ -47,6 +49,8 @@ public class Cloud : MonoBehaviour {
 		mainCam = Camera.main;
 		dm = DataManager.Instance;
 		tm = TutorialManager.Instance;
+		am = AudioManager.Instance;
+		audioSource = gameObject.GetComponent<AudioSource>();
 				
 		transform.localScale = new Vector3(startSize, startSize, 1);
 		spriteRenderer = GetComponent<SpriteRenderer>();
@@ -69,12 +73,10 @@ public class Cloud : MonoBehaviour {
 
 	void Update()
 	{
-		max = plant.TopPosisiton.y;
 //		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton + cloudOffset);
 //		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos);
 		cloudScreenPos = mainCam.WorldToViewportPoint(plant.TopPosisiton);
 		transform.position = cloudCam.ViewportToWorldPoint(cloudScreenPos + cloudOffset);
-		prevYPos = cloudScreenPos.y;
 		currentScale = transform.localScale;
 		cloudPercentage = currentScale.x/maxSize;
 		float cloudGrey = Mathf.Lerp(1, darkestGrey, cloudPercentage);
@@ -116,6 +118,18 @@ public class Cloud : MonoBehaviour {
 	{
 		Size = startSize;
 	}
+	
+	public void StartSound()
+	{
+		audioSource.Play();
+		am.DimMusic();
+	}
+	
+	public void StopSound()
+	{
+		audioSource.Pause();
+		am.UndimMusic();
+	}
 	#endregion
 	
 	#region Private
@@ -123,7 +137,9 @@ public class Cloud : MonoBehaviour {
 	private Camera cloudCam;
 	private Camera mainCam;
 	private DataManager dm;
+	private AudioManager am;
 	private TutorialManager tm;
+	private AudioSource audioSource;
 	private float screenHeight;
 	private Vector3 cloudScreenPos;
 	private const int MAX_RAIN_DROPS = 500;
@@ -134,10 +150,6 @@ public class Cloud : MonoBehaviour {
 	private List<VectorLine> raindrops;
 	private List<float> raindropTimers;
 	private List<float> raindropLengths;
-	Touch firstTouch;
-	Touch secondTouch;
-	private float prevYPos;
-	private float max;
 	private float growthRate, depletionRate;
 	private bool cloudDepletedTutDisplayed;
 	

@@ -1,5 +1,8 @@
+/*Sean Maltz 2014*/
+
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using Vectrosity;
 
 public class CameraManager : SingletonMonoBehaviour<CameraManager> {
@@ -27,6 +30,7 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	[Range (0, 2)]public float doubleTapTimeout = .5f;
 	public Transform backgroundRepeatPrefab;
 	public Transform environmentTransform;
+	public Transform[] repeatObjects;
 	public float backgroundRepeatStartY;
 	public float backgroundRepeatIncrement;
 	#endregion
@@ -35,6 +39,21 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	public float Width
 	{
 		get {return width; }
+	}
+	
+	public ushort NumberOfPlanets
+	{
+		get {return (planetCount); }
+	}
+	
+	public List<Transform> Planets
+	{
+		get {return planets; }
+	}
+	
+	public List<byte> PlanetIndices
+	{
+		get {return planetIndices; }
 	}
 	#endregion
 	
@@ -85,6 +104,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		backgroundRepeatY = backgroundRepeatStartY;
 		
 		doubleTapTutorialNotDisplayed = !(PlayerPrefs.GetInt(string.Format("tut{0}", DOUBLE_TAP_TUT_ID)) == 2);
+		
+		planets = new List<Transform>();
+		planetIndices = new List<byte>();
 	}
 	
 	void Start()
@@ -241,7 +263,16 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private const float FLOWER_TUT_DELAY = 4f;
 	private const int CLOUD_LAYER = 9;
 	private const float FOV_MAX = 179;
+	private const float PLANET_Y_MIN = 300;
+	private const float PLANET_Y_MAX = 369;
+	private const float PLANET_X_MIN = -9;
+	private const float PLANET_X_MAX = 9;
+	private const float PLANET_Z_MIN = -5;
+	private const float PLANET_Z_MAX = 10;
+	private const float PLANET_SCALE_MIN = .5f;
+	private const float PLANET_SCALE_MAX = 1.5f;
 	private LayerMask notCloudLayer = ~(1 << CLOUD_LAYER);
+	
 	private DataManager dm;
 	private TutorialManager tm;
 	private GUIManager gm;
@@ -262,12 +293,14 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	private float lastTouchTimer, doubleTapTimer, scrolledDownTimer;
 	private float initialCameraY;
 	private float backgroundRepeatY, backgroundRepeatTileY;
-	private bool firstCloudPress = true;
 	private bool doubleTapTutorialNotDisplayed;
 	private bool multipleTouches;
 	private float lineMaxWidth, lineMinWidth;
 	private float horizAutoMovementWorldSpace;
 	private float maxFOV;
+	private ushort planetCount;
+	private List<Transform> planets;
+	private List<byte> planetIndices;
 	
 	private float CalculateMaxFOV()
 	{
@@ -311,6 +344,37 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		Transform newTile = (Transform)Instantiate(backgroundRepeatPrefab);
 		newTile.parent = environmentTransform;
 		newTile.position = new Vector3(0, backgroundRepeatTileY + backgroundRepeatPrefab.position.y);
+		if (planetCount >= dm.numberOfPlanetsLoaded)
+			AddNewPlanet(newTile);
+		else
+			LoadPlanet(newTile);
+			
+	}
+	
+	private void AddNewPlanet(Transform newTile)
+	{
+		byte index = (byte)Random.Range(0, repeatObjects.Length);
+		Transform planet = (Transform)Instantiate(repeatObjects[index]);
+		planet.parent = newTile;
+		planet.transform.localPosition = new Vector3(Random.Range(PLANET_X_MIN, PLANET_X_MAX), Random.Range(PLANET_Y_MIN, PLANET_Y_MAX), Random.Range(PLANET_Z_MIN, PLANET_Z_MAX));
+		float scale = Random.Range(PLANET_SCALE_MIN, PLANET_SCALE_MAX);
+		planet.transform.localScale = new Vector3(scale, scale, 1);
+		planets.Add(planet.transform);
+		planetIndices.Add(index);
+		planetCount++;
+	}
+	
+	private void LoadPlanet(Transform newTile)
+	{
+		byte index = dm.planetsIndicesLoaded[planetCount];
+		Transform planet = (Transform)Instantiate(repeatObjects[index]);
+		planet.parent = newTile;
+		planet.transform.localPosition = new Vector3(dm.planetLocalPosLoaded[planetCount].x, dm.planetLocalPosLoaded[planetCount].y, dm.planetLocalPosLoaded[planetCount].z);
+		float scale = dm.planetScalesLoaded[planetCount];
+		planet.transform.localScale = new Vector3(scale, scale, 1);
+		planets.Add(planet.transform);
+		planetIndices.Add(index);
+		planetCount++;
 	}
 	
 	private void ProcessTouchBegan(Vector2 coordinates)
@@ -319,15 +383,27 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 		Ray mainRay = mainCam.ScreenPointToRay(coordinates);
 		RaycastHit hit;
 		
-		touchBeganOnCloud = (Physics.Raycast(cloudRay));
+		touchBeganOnCloud = (Physics.Raycast(cloudRay) && !gm.MenuOpen);
+		if (touchBeganOnCloud)
+			cloud.StartSound();
 		
 		flowerTouched = null;
 		
 		if (Physics.Raycast(mainRay, out hit, Mathf.Infinity, notCloudLayer))
 		{
 			Collider collider = hit.collider;
-			if (collider != null && collider.tag == "Flower")
-				flowerTouched = collider;
+			if (collider != null)
+			{
+				switch (collider.tag)
+				{
+				case "Flower":
+					flowerTouched = collider;
+					break;
+				case "Mover":
+					collider.gameObject.GetComponent<Mover>().Touched();
+					break;
+				}
+			}
 		}
 		
 		if (doubleTapTimer < doubleTapTimeout && scrollMomentum == 0)
@@ -365,15 +441,9 @@ public class CameraManager : SingletonMonoBehaviour<CameraManager> {
 	
 	private void ProcessTouchEnded(Vector2 coordinates)
 	{
-//		if (touchBeganOnCloud)
-//		{
-//			if (firstCloudPress)
-//			{
-//				firstCloudPress = false;
-//				tm.TriggerTutorial(WATERED_TUT_ID);
-//			}
-//		}		
-//		else 
+		if (touchBeganOnCloud)
+			cloud.StopSound();
+		
 		if (!touchBeganOnCloud && !multipleTouches)
 		{
 			scrollMomentum = (prevCoords.y - coordinates.y) * scrollMomentumSensitivity * Mathf.Pow(mainCam.fieldOfView, scrollMomentumFOVPower);;

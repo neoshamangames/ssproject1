@@ -1,3 +1,5 @@
+/*Sean Maltz 2014*/
+
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
